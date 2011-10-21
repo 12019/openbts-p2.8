@@ -1,6 +1,6 @@
 /*
  * Radio device interface with sample rate conversion
- * Written by Thomas Tsou <ttsou@vt.edu>
+ * Written by Thomas Tsou <ttsou@vt.edu> (Not subject to CLA)
  *
  * Copyright 2011 Free Software Foundation, Inc.
  *
