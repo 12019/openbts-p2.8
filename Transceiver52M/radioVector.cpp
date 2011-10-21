@@ -1,5 +1,5 @@
 /*
- * Written by Thomas Tsou <ttsou@vt.edu>
+ * Written by Thomas Tsou <ttsou@vt.edu> (Not subject to CLA)
  * Based on code by Harvind S Samra <hssamra@kestrelsp.com>
  *
  * Copyright 2011 Free Software Foundation, Inc.
