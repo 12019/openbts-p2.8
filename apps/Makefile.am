@@ -23,6 +23,7 @@ include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
 AM_CXXFLAGS = -Wall -ldl -pthread
+AM_LDFLAGS = $(LIBOSMOGSM_LIBS)
 
 noinst_PROGRAMS = \
 	OpenBTS
