@@ -190,6 +190,7 @@ class L3RAND : public L3ProtocolElement {
 
 	uint64_t mRUpper;		///< upper 64 bits
 	uint64_t mRLower;		///< lower 64 bits
+	unsigned char rand[16];
 
 	public:
 
@@ -202,6 +203,7 @@ class L3RAND : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&) { assert(0); }
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
+	unsigned char* getRandToA3A8();	
 };
 
 
@@ -227,9 +229,8 @@ class L3SRES : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&);
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
+	bool checkSRES(uint8_t *);
 };
-
-
 
 } // namespace GSM
 

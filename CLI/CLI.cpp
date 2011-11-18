@@ -45,7 +45,10 @@
 #include <TMSITable.h>
 #include <RadioResource.h>
 #include <CallControl.h>
-
+extern "C" {
+#include <osmocom/gsm/comp128.h>
+#include <osmocom/gsm/a5.h>
+}
 #include <Globals.h>
 
 #include "CLI.h"
@@ -282,6 +285,66 @@ int tmsis(int argc, char** argv, ostream& os, istream& is)
 	return SUCCESS;
 }
 
+int testA3(int argc, char** argv, ostream& os, istream& is)
+{
+  if (argc != 2) {
+    os << "usage: testA3 <imsiprefix>\n";
+    return BAD_VALUE;
+  }
+  
+  const char *imsi = argv[1];
+    
+  if (gConfig.defines("Control.Reporting.KiTable")) {
+    
+    LOG(DEBUG) << "imsi = " << imsi;
+    gKiTable.loadAndFindKI(imsi);
+    LOG(INFO) << "Ki = " << gKiTable.getKi();
+    
+    GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
+    for (int i = 0; i < 16; i++)
+      LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+
+    uint64_t Kc;
+    unsigned int SRES;
+    
+    comp128(gKiTable.getKi(), mRand.getRandToA3A8(), (uint8_t *)&SRES, (uint8_t *)&Kc);
+    
+    LOG(DEBUG) << "Kc = " << Kc;
+    os << "kc=" << Kc << endl;
+    LOG(DEBUG) << "SRES = " << SRES;
+    os << "SRES=" << SRES << endl;
+
+    uint32_t frameno;
+    frameno = gKiTable.getFrameNumber();
+    LOG(DEBUG) << "frameNumber = " << frameno;
+
+    ubit_t uplink[114], downlink[114];
+    osmo_a5_1((uint8_t *)&Kc, frameno, downlink, uplink);
+  }
+  else {
+    os << " FIXME: error: bad value " << endl;
+    return BAD_VALUE;
+  }
+  return SUCCESS;
+}
+
+int findki(int argc, char** argv, ostream& os, istream& is) 
+{
+  if (argc != 2) {
+    os << "usage: findki <imsiprefix>\n";
+    return BAD_VALUE;
+  }
+
+  const char *imsi = argv[1];
+  LOG(DEBUG) << "KIYaRAB3 = " << imsi;
+  if (gConfig.defines("Control.Reporting.KiTable")) {
+    gKiTable.loadAndFindKI(imsi);
+    unsigned char* ki = gKiTable.getKi();
+    LOG(DEBUG) << "KIGedid = " << ki;
+    os << "ki=" << ki << endl;
+  }
+  return SUCCESS;
+}
 
 /** Submit an SMS for delivery to an IMSI. */
 int sendsimple(int argc, char** argv, ostream& os, istream& is)
@@ -741,6 +804,8 @@ Parser::Parser()
 	addCommand("help", showHelp, "[command] -- list available commands or gets help on a specific command.");
 	addCommand("exit", exit_function, "[wait] -- exit the application, either immediately, or waiting for existing calls to clear with a timeout in seconds");
 	addCommand("tmsis", tmsis, "[\"clear\"] or [\"dump\" filename] -- print/clear the TMSI table or dump it to a file.");
+	addCommand("findki", findki, "[KIPrefix] -- prints all ki's that are prefixed by KIPrefix");
+	addCommand("testA3", testA3, "-- testA3");
 	addCommand("sendsms", sendsms, "<IMSI> <src> -- send direct SMS to <IMSI>, addressed from <src>, after prompting.");
 	addCommand("sendsimple", sendsimple, "<IMSI> <src> -- send SMS to <IMSI> via SIP interface, addressed from <src>, after prompting.");
 	addCommand("sendrrlp", sendrrlp, "<IMSI> <hexstring> -- send RRLP message <hexstring> to <IMSI>.");

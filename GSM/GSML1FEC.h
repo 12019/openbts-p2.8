@@ -60,7 +60,8 @@ class SACCHL1Encoder;
 class SACCHL1Decoder;
 class SACCHL1FEC;
 class TrafficTranscoder;
-
+class SDCCHL1Encoder;
+class SDCCHL1FEC;
 
 
 
@@ -88,6 +89,9 @@ class L1Encoder {
 	ARFCNManager *mDownstream;
 	TxBurst mBurst;					///< a preformatted burst template
 	TxBurst mFillerBurst;			///< the filler burst for this channel
+	uint8_t Kc[8];
+	bool Kc_set;
+	bool cipherMode;
 
 	/**@name Config items that don't change. */
 	//@{
@@ -107,6 +111,7 @@ class L1Encoder {
 	unsigned mTotalBursts;			///< total bursts sent since last open()
 	GSM::Time mPrevWriteTime;		///< timestamp of pervious generated burst
 	GSM::Time mNextWriteTime;		///< timestamp of next generated burst
+	GSM::Time mCount;
 	volatile bool mRunning;			///< true while the service loop is running
 	bool mActive;					///< true between open() and close()
 	//@}
@@ -171,6 +176,12 @@ class L1Encoder {
 
 	const char* descriptiveString() const { return mDescriptiveString; }
 
+	// set Kc for ciphering
+	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); Kc_set = true; }
+	
+	// enable ciphering if Kc is set
+	bool enableCiphering() { if (Kc_set) cipherMode = true; else return false; }
+
 	protected:
 
 	/** Roll write times forward to the next positions. */
@@ -208,6 +219,9 @@ class L1Decoder {
 	protected:
 
 	SAPMux * mUpstream;
+	uint8_t Kc[8];
+	bool Kc_set;
+	bool cipherMode;
 
 	/**@name Mutex-controlled state information. */
 	//@{
@@ -221,6 +235,7 @@ class L1Decoder {
 	bool mActive;						///< true between open() and close()
 	//@}
 
+	GSM::Time mCount;
 	/**@name Atomic volatiles, no mutex. */
 	// Yes, I realize we're violating our own rules here. -- DAB
 	//@{
@@ -259,6 +274,8 @@ class L1Decoder {
 		// Start T3101 so that the channel will
 		// become recyclable soon.
 		mT3101.set();
+		Kc_set = false;
+		cipherMode = false;
 	}
 
 
@@ -309,6 +326,11 @@ class L1Decoder {
 	TypeAndOffset typeAndOffset() const;	///< this comes from mMapping
 	//@}
 
+	// set Kc for deciphering
+	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); Kc_set = true; }
+
+	// enable deciphering if Kc is set
+	bool enableDeciphering() { if (Kc_set) cipherMode = true; else return false; }
 
 	protected:
 
@@ -406,6 +428,16 @@ class L1FEC {
 	const char* descriptiveString() const
 		{ assert(mEncoder); return mEncoder->descriptiveString(); }
 
+	void setKc(uint8_t *Kc)
+	    {
+			assert(mEncoder); mEncoder->setKc(Kc);
+			assert(mDecoder); mDecoder->setKc(Kc);
+	    }
+
+	bool enableCiphering() { assert(mEncoder); return mEncoder->enableCiphering(); }
+
+	bool enableDeciphering() { assert(mDecoder); return mDecoder->enableDeciphering(); }
+
 	//@}
 
 
@@ -487,6 +519,7 @@ class XCCHL1Decoder : public L1Decoder {
 	/**@name FEC state. */
 	//@{
 	Parity mBlockCoder;
+	SoftVector mE[4];           ///< e[][], as per GSM 05.03 2.2
 	SoftVector mI[4];			///< i[][], as per GSM 05.03 2.2
 	SoftVector mC;				///< c[], as per GSM 05.03 2.2
 	BitVector mU;				///< u[], as per GSM 05.03 2.2
@@ -522,6 +555,9 @@ class XCCHL1Decoder : public L1Decoder {
 	*/
 	virtual bool processBurst(const RxBurst&);
 	
+	/* Decrypt
+	*/
+	virtual void decrypt();
 	/**
 	  Deinterleave the i[] to c[].
 	  This virtual method works for all block-interleaved channels (xCCHs).
@@ -691,6 +727,52 @@ class XCCHL1Encoder : public L1Encoder {
 };
 
 
+class SDCCHL1Encoder : public XCCHL1Encoder {
+
+	private:
+
+	/**@name FEC signal processing state.  */
+	//@{
+	BitVector mE[4];			///< e[][], as per GSM 05.03 2.2
+
+
+	//@}
+//	Thread mEncoderThread;
+//	friend void SDCCHL1EncoderRoutine( SDCCHL1Encoder * encoder );
+	public:
+
+	
+	SDCCHL1Encoder(
+		unsigned wTN,
+		const TDMAMapping& wMapping,
+		L1FEC* wParent);
+
+	 void encrypt();
+
+	/** Extend open() to set up semaphores. */
+//	void open();
+
+	protected:
+
+	/** Send a single L2 frame.  */
+	virtual void sendFrame(const L2Frame&);
+
+	/**
+	  Format i[] into timeslots and send them down for transmission.
+	  Set stealing flags assuming a control channel.
+	  Also updates mWriteTime.
+	  GSM 05.03 4.1.5, 05.02 5.2.3.
+	*/
+	 void transmit();
+
+	/** Will start the dispatch thread. */
+//	void start();
+
+
+};
+
+/** The C adapter for pthreads. */
+//	void SDCCHL1EncoderRoutine( SDCCHL1Encoder * encoder );
 
 /** L1 encoder used for full rate TCH and FACCH -- mostry from GSM 05.03 3.1 and 4.2 */
 class TCHFACCHL1Encoder : public XCCHL1Encoder {
@@ -700,6 +782,7 @@ private:
 	bool mPreviousFACCH;	///< A copy of the previous stealing flag state.
 	size_t mOffset;			///< Current deinterleaving offset.
 
+    BitVector mE[8];			///< encrypting, 8 blocks instead of 4
 	BitVector mI[8];			///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;				///< u[], but for traffic
 	BitVector mTCHD;				///< d[], but for traffic
@@ -733,6 +816,8 @@ public:
 
 protected:
 
+    /** Interleave i[] to e[].  GSM 05.03 4.1.4. */
+	virtual void encrypt();
 	/** Interleave c[] to i[].  GSM 05.03 4.1.4. */
 	virtual void interleave(int blockOffset);
 
@@ -763,6 +848,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 
 	protected:
 
+    SoftVector mE[8];	///< decrypting history, 8 blocks instead of 4
 	SoftVector mI[8];	///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;					///< u[] (uncoded) in the spec
 	BitVector mTCHD;					///< d[] (data) in the spec
@@ -796,6 +882,8 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 	*/
 	bool processBurst( const RxBurst& );
 	
+    /** Decrypt e[] to i[].  */
+    void decrypt();
 	/** Deinterleave i[] to c[].  */
 	void deinterleave(int blockOffset );
 
@@ -1011,7 +1099,7 @@ class SACCHL1Encoder : public XCCHL1Encoder {
 
 
 
-typedef XCCHL1Encoder SDCCHL1Encoder;
+//typedef XCCHL1Encoder SDCCHL1Encoder;
 
 
 /** The Common Control Channel (CCCH).  Carries the AGCH, NCH, PCH. */
@@ -1145,7 +1233,7 @@ class LoopbackL1FEC : public L1FEC {
 	LoopbackL1FEC(unsigned wTN)
 		:L1FEC()
 	{
-		mEncoder = new XCCHL1Encoder(wTN,gLoopbackTestFullMapping,this);
+		mEncoder = new SDCCHL1Encoder(wTN,gLoopbackTestFullMapping,this);
 		mDecoder = new SDCCHL1Decoder(wTN,gLoopbackTestFullMapping,this);
 	}
 };

@@ -31,7 +31,9 @@
 #include "MobilityManagement.h"
 #include "SMSControl.h"
 #include "CallControl.h"
-
+extern "C" {
+#include <osmocom/gsm/comp128.h>
+}
 #include <GSMLogicalChannel.h>
 #include <GSML3RRMessages.h>
 #include <GSML3MMMessages.h>
@@ -489,7 +491,71 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		if (!gTMSITable.classmark(IMSI,classmark))
 			LOG(WARNING) << "failed access to TMSITable";
 		delete msg;
-	}
+	    }
+/**Authentication Procedures, GSM 04.08 4.3.2.*/
+DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+
+LOG(INFO) << "Authentication Request Sent";
+
+L3Message* msg = getMessage(DCCH);
+LOG(INFO) << *msg<< "Authentication Response";
+
+L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
+  if (!resp) {
+   if (msg) {
+    LOG(WARNING) << "Unexpected message " << *msg;
+    delete msg;
+   }
+   throw UnexpectedMessage();
+  }
+LOG(INFO) << *resp<< "Response Recieved";
+
+
+const char* imsi;
+imsi = mobileID.digits();
+if (gConfig.defines("Control.KiTable.SavePath")) {
+	LOG(INFO) << "IMSI=" << imsi;
+	gKiTable.loadAndFindKI(imsi);
+	//LOG(INFO) << "Ki = " << gKiTable.getKi(); // pointless getKi() returns pointer
+
+	GSM::L3RAND mRand(6,9);//FIXME:use right numbers
+
+	for (int i=0;i<16;i++)
+		LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+
+	uint64_t Kc;
+	uint8_t SRES[4];
+	comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	mobileID.setKC(Kc);
+	LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
+
+    if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
+    {/**	Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
+	LOG(INFO) << "Ciphering Command Will Send";
+        DCCH->send(GSM::L3CipheringModeCommand());
+	LOG(INFO) << "Ciphering Command Sent";
+
+	L3Frame* resp = DCCH->recv();
+	LOG(INFO) << "Received";
+	if (!resp) { LOG(NOTICE) << "Ciphering Error"; } 
+	else { LOG(INFO) << *resp <<"Responce"; }
+	delete resp;
+
+    LOG(INFO) << "Ciphering Completed";
+    }
+    else
+    { // If the IMSI has been used, TMSI Case has been neglected as it is never Used.
+
+        DCCH->send(L3AuthenticationReject());
+    	LOG(INFO) <<  "Authentication Reject";
+        // Release the channel and return.
+        DCCH->send(L3ChannelRelease());
+	LOG(INFO) << "Channel Release";
+        DCCH->send(L3CMServiceReject(0x06));
+	LOG(INFO) << "CM Service Reject";
+        return;
+    }
+}
 
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {
