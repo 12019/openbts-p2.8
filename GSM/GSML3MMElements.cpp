@@ -224,12 +224,10 @@ void L3TimeZoneAndTime::text(ostream& os) const
 	os << timeStr << " (local)";
 }
 
-
-
 void L3RAND::writeV(L3Frame& dest, size_t &wp) const
 {
-	dest.writeField(wp,mRUpper,64);
-	dest.writeField(wp,mRLower,64);
+	dest.writeField(wp, mRUpper, 64);
+	dest.writeField(wp, mRLower, 64);
 }
 
 void L3RAND::text(ostream& os) const
@@ -247,5 +245,34 @@ void L3SRES::text(ostream& os) const
 	os << hex << "0x" << mValue << dec;
 }
 
+unsigned char* L3RAND::getRandToA3A8()
+	{
+		char mRandLower[sizeof(uint64_t)];
+		char mRandUpperm[sizeof(uint64_t)];
+		unsigned char newRand[16];
+
+		for ( int i = 0; i < sizeof(uint64_t); ++i) 
+			mRandLower[i] =(mRLower >> (8 * i)) & 0xFF;
+
+		for (int i = 0; i < sizeof(uint64_t); ++i) 
+			mRandUpperm[i] = ( mRUpper>> (8 * i)) & 0xFF;
+
+		for (int i=0; i<8; i++)
+		{
+			newRand[i] = mRandLower[i];
+			newRand[i+8] = mRandUpperm[i];
+		}
+		
+		for (int i=15; i>=0; --i)
+			rand[15-i] = newRand[i];
+		
+		return rand;
+	}
+
+bool L3SRES::checkSRES(uint8_t * sres)
+{
+    if(0 == memcmp(reinterpret_cast<const uint8_t *>(mValue), sres, 4)) return true;
+    return false;
+}
 
 // vim: ts=4 sw=4

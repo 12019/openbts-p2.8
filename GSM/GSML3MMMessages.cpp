@@ -75,6 +75,8 @@ ostream& GSM::operator<<(ostream& os, L3MMMessage::MessageType val)
 			os << "Authentication Request"; break;
 		case L3MMMessage::AuthenticationResponse:
 			os << "Authentication Response"; break;
+        case L3MMMessage::AuthenticationReject:
+        os << "AuthenticationReject"; break;
 		default: os << hex << "0x" << (int)val << dec;
 	}
 	return os;

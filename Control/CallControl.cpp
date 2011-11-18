@@ -56,6 +56,9 @@
 #include <SIPEngine.h>
 
 #include <Logger.h>
+extern "C" {
+#include <osmocom/gsm/comp128.h>
+}
 #undef WARNING
 
 using namespace std;
@@ -651,6 +654,67 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// For now, we are assuming that the phone won't make a call if it didn't
 	// get registered.
 
+	/* Authentication Procedures, GSM 04.08 4.3.2.*/
+	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+
+	LOG(INFO) << "Authentication Request Sent ";
+
+	GSM::L3Message * msg = getMessage(LCH);
+	LOG(INFO) << *msg<< "Authentication Response ";
+
+	GSM::L3AuthenticationResponse *resp = dynamic_cast<GSM::L3AuthenticationResponse*>(msg);
+	if (!resp) {
+	  if (msg) {
+	    LOG(WARNING) << "Unexpected message " << *msg;
+	    delete msg;
+	  }
+	  throw UnexpectedMessage();
+	}
+	LOG(INFO) << *resp << "Response Recieved ";
+
+	const char* imsi;
+	imsi = mobileID.digits();
+	if (gConfig.defines("Control.KiTable.SavePath")) {
+	  LOG(INFO) << "imsi = " << imsi;
+	  gKiTable.loadAndFindKI(imsi);
+	  LOG(INFO) << "Ki = " << gKiTable.getKi();
+
+	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used
+
+	  for (int i = 0; i < 16; i++)
+	    LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+
+	  uint64_t Kc;
+	  uint8_t SRES[4];
+	  comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	  mobileID.setKC(Kc);
+
+	  if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
+	    {/**Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
+	      LCH->send(GSM::L3CipheringModeCommand());
+	      LOG(INFO) << "Ciphering Command Sent ";
+
+	      GSM::L3Frame* resp = LCH->recv();
+	      if (!resp) { LOG(NOTICE) << "Ciphering Error ";} 
+	      else { LOG(INFO) << *resp; }
+	      delete resp;
+
+	      LOG(INFO)<< "Ciphering Completed ";
+	    } 
+	  else 
+	    { // If the IMSI has been used, TMSI Case has been neglected as it is never Used.
+	      LCH->send(GSM::L3AuthenticationReject());
+	      LOG(INFO) <<  "Authentication Reject ";
+	      // Release the channel and return.
+	      LCH->send(GSM::L3CMServiceReject(0x21));
+	      LOG(INFO) << "CM Service Reject ";
+	      LCH->send(GSM::L3ChannelRelease(0x6f));
+	      LOG(INFO) << "Channel Release ";
+        
+	      return;
+	    }
+	}
+
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	if (!veryEarly) {
@@ -887,7 +951,7 @@ void Control::MOCController(TransactionEntry *transaction, GSM::TCHFACCHLogicalC
 
 
 
-void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH)
+void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH, GSM::L3MobileIdentity mobID)
 {
 	assert(LCH);
 	LOG(INFO) << "MTC on " << LCH->type() << " transaction: "<< *transaction;
@@ -911,6 +975,67 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	// processed the INVITE that started this call.
 	unsigned L3TI = transaction->L3TI();
 	assert(L3TI<7);
+
+	/* Authentication Procedures, GSM 04.08 4.3.2.*/
+	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+
+	LOG(INFO) << "Authentication Request Sent";
+
+	GSM::L3Message* msg = getMessage(LCH);
+	LOG(INFO) << *msg<< "Authentication Response";
+
+	GSM::L3AuthenticationResponse *response = dynamic_cast<GSM::L3AuthenticationResponse*>(msg);
+	if (!response) {
+	  if (msg) {
+	    LOG(WARNING) << "Unexpected message " << *msg;
+	    delete msg;
+	  }
+	  throw UnexpectedMessage();
+	}
+	LOG(INFO) << *response << "Response Recieved";
+
+	const char * imsi;
+	imsi = mobID.digits();
+	if (gConfig.defines("Control.KiTable.SavePath")) {
+	  LOG(INFO) << "imsi = " << imsi;
+	  gKiTable.loadAndFindKI(imsi);
+	  LOG(INFO) << "Ki = " << gKiTable.getKi();
+
+	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used;
+
+	  for (int i=0;i<16;i++)
+	    LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+    
+	  uint64_t Kc;
+	  uint8_t SRES[4];
+	  comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	  mobID.setKC(Kc);
+
+	  if(response->checkSRES(SRES)) // Comparison between SRES and Resp
+	    {/**Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
+	      LCH->send(GSM::L3CipheringModeCommand());
+	      LOG(INFO) << "Ciphering Command Sent";
+
+	      GSM::L3Frame* response = LCH->recv();
+	      if (!response) { LOG(NOTICE) << "Ciphering Error"; } 
+	      else { LOG(INFO) << *response; }
+	      delete response;
+
+	      LOG(INFO)<< "Ciphering Completed";
+	    }
+	  else
+	    { // If the IMSI has been used, TMSI Case has been neglected as it is never Used.
+
+	      LCH->send(GSM::L3AuthenticationReject());
+	      LOG(INFO) <<  "Authentication Reject";
+	      // Release the channel and return.
+	      LCH->send(GSM::L3ChannelRelease());
+	      LOG(INFO) << "Channel Release";
+	      LCH->send(GSM::L3CMServiceReject(0x06));
+	      LOG(INFO) << "CM Service Reject";
+	      return;
+	    }
+	}
 
 	// GSM 04.08 5.2.2.1
 	LOG(INFO) << "sending GSM Setup to call " << transaction->calling();
