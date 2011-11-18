@@ -46,9 +46,7 @@ using namespace std;
 using namespace GSM;
 using namespace Control;
 
-
-
-
+KiTable gKiTable;
 
 // FIXME -- getMessage should return an L3Frame, not an L3Message.
 // This will mean moving all of the parsing into the control layer.
@@ -146,7 +144,97 @@ unsigned  Control::resolveIMSI(bool sameLAI, L3MobileIdentity& mobileID, Logical
 	return 0;
 }
 
+void KiTable::setFrameNumber(uint32_t FN){
+	frameNumber=FN;
+}
 
+uint32_t KiTable::getFrameNumber(){
+	return frameNumber;
+}
+
+bool KiRecord::load(FILE* fp) {
+  
+	/*
+	 * fix - Ki cannot be returned as unsigned, can be stored in Byte array only
+	 * next fix: load should return bool value indicating correct line format
+	 *
+	 * current file format is following;
+	 * <IMSI> <Ki>
+	 * possible file verification: check count of chars, digits
+	 *
+	 * in the end, database would be handsome
+	 */
+
+    char IMSI[16];
+    char Ki[33];
+	fscanf(fp, "%15s %32s\n",IMSI, Ki);
+	LOG(DEBUG) << "Reading IMSI=" << IMSI << " Ki=" << Ki;
+    mIMSI = IMSI;
+    mKi = Ki;
+    return true;
+}
+
+
+int KiTable::hextoint(char x) {//FIXME - use standard function
+    x = toupper(x);
+    if (x >= 'A' && x <= 'F')
+        return x - 'A' + 10;
+    else if (x >= '0' && x <= '9')
+        return x - '0';
+    exit(1);
+}
+
+bool KiTable::loadAndFindKI(const char* IMSI) {
+    const char* filename = gConfig.getStr("Control.KiTable.SavePath").c_str();
+    FILE* fp = fopen(filename, "r");
+    const unsigned char *KiSigned;
+    bool IMSIfound = 0;
+
+    LOG(INFO) << "Loading data from " << filename << ", searching IMSI=" << IMSI;
+    mLock.lock();
+    while (!feof(fp)) {
+
+        KiRecord val; // todo: initiate instance out of cycle and handle destructor
+        val.load(fp);
+        if (!strcmp(val.IMSI(), IMSI)) {
+			LOG(INFO) << "IMSI:" << IMSI << " found in table, authorization process can continue";
+			IMSIfound = 1;
+            KiSigned = val.Ki();
+			LOG(INFO) << "Ki=" << KiSigned;
+            for (int i = 0; i < 16; i++){
+                Ki[i] = (hextoint(KiSigned[2 * i]) << 4) | hextoint(KiSigned[2 * i + 1]);
+                /* cast to unsigned is necessary, else is displayed corrupted value  */
+				LOG(DEBUG) << "Converting Ki to unsigned: " << (unsigned) Ki[i]; //
+			}
+            break;
+        }
+		
+        // if (!key) break; //no use, load returns currently 0
+    }
+	mLock.unlock();
+    fclose(fp);
+    if (!IMSIfound) {
+    	LOG(INFO) << "IMSI="<< IMSI << " not found, skip authorization process";
+    	return 0;
+    } else
+    	return 1;
+}
+
+
+/* Resolve a mobile ID to an IMSI and return KI if it is assigned. */
+unsigned char*  Control::resolveKI(L3MobileIdentity& mobID, LogicalChannel* LCH)
+{
+	// Returns known or assigned TMSI.
+	assert(LCH);
+	LOG(DEBUG) << "resolving mobile ID " << mobID ;
+
+	// IMSI already?  See if there's a TMSI already, too.
+	// This is a linear time operation, but should only happen on
+	// the first registration by this mobile.
+	if (mobID.type()==IMSIType) {
+		gKiTable.loadAndFindKI(mobID.digits());
+		return gKiTable.getKi();}
+	}
 
 /* Resolve a mobile ID to an IMSI. */
 void  Control::resolveIMSI(L3MobileIdentity& mobileIdentity, LogicalChannel* LCH)

@@ -32,7 +32,9 @@
 #include "SMSControl.h"
 #include "CallControl.h"
 #include "RRLPServer.h"
-
+extern "C" {
+#include <osmocom/gsm/comp128.h>
+}
 #include <GSMLogicalChannel.h>
 #include <GSML3RRMessages.h>
 #include <GSML3MMMessages.h>
@@ -133,6 +135,261 @@ bool sendWelcomeMessage(const char* messageName, const char* shortCodeName, cons
 	return true;
 }
 
+
+
+class RRLPServer
+{
+	public:
+		RRLPServer(L3MobileIdentity wMobileID, LogicalChannel *wDCCH);
+		// tell server to send location assistance to mobile
+		bool assist();
+		// tell server to ask mobile for location
+		bool locate();
+	private:
+		RRLPServer(); // not allowed
+		string url;
+		L3MobileIdentity mobileID;
+		LogicalChannel *DCCH;
+		string query;
+		string name;
+		bool transact();
+		bool trouble;
+};
+
+RRLPServer::RRLPServer(L3MobileIdentity wMobileID, LogicalChannel *wDCCH)
+{
+	trouble = false;
+	url = gConfig.getStr("GSM.RRLP.SERVER.URL", "");
+	if (url.length() == 0) {
+		LOG(INFO) << "RRLP not configured";
+		trouble = true;
+		return;
+	}
+	mobileID = wMobileID;
+	DCCH = wDCCH;
+	// name of subscriber
+	name = string("IMSI") + mobileID.digits();
+	// don't continue if IMSI has a RRLP support flag and it's false
+	unsigned int supported = 0;
+	if (sqlite3_single_lookup(gSubscriberRegistry.db(), "sip_buddies", "name", name.c_str(),
+							"RRLPSupported", supported) && !supported) {
+		LOG(INFO) << "RRLP not supported for " << name;
+		trouble = true;
+	}
+}
+
+bool RRLPServer::assist()
+{
+	if (trouble) return false;
+	query = "query=assist";
+	return transact();
+}
+
+bool RRLPServer::locate()
+{
+	if (trouble) return false;
+	query = "query=loc";
+	return transact();
+}
+
+void clean(char *line)
+{
+	char *p = line + strlen(line) - 1;
+	while (p > line && *p <= ' ') *p-- = 0;
+}
+
+string getConfig()
+{
+	const char *configs[] = {
+		"GSM.RRLP.ACCURACY",
+		"GSM.RRLP.RESPONSETIME",
+		"GSM.RRLP.ALMANAC.URL",
+		"GSM.RRLP.EPHEMERIS.URL",
+		"GSM.RRLP.ALMANAC.REFRESH.TIME",
+		"GSM.RRLP.EPHEMERIS.REFRESH.TIME",
+		"GSM.RRLP.SEED.LATITUDE",
+		"GSM.RRLP.SEED.LONGITUDE",
+		"GSM.RRLP.SEED.ALTITUDE",
+		"GSM.RRLP.EPHEMERIS.ASSIST.COUNT",
+		"GSM.RRLP.ALMANAC.ASSIST.PRESENT",
+		0
+	};
+	string config = "";
+	for (const char **p = configs; *p; p++) {
+		string configValue = gConfig.getStr(*p, "");
+		if (configValue.length() == 0) return "";
+		config.append("&");
+		config.append(*p);
+		config.append("=");
+		if (0 == strcmp((*p) + strlen(*p) - 3, "URL")) {
+			// TODO - better to have urlencode and decode, but then I'd have to look for them
+			char buf[3];
+			buf[2] = 0;
+			for (const char *q = configValue.c_str(); *q; q++) {
+				sprintf(buf, "%02x", *q);
+				config.append(buf);
+			}
+		} else {
+			config.append(configValue);
+		}
+	}
+	return config;
+}
+
+bool RRLPServer::transact()
+{
+	vector<string> apdus;
+	while (true) {
+		// bounce off server
+		string esc = "'";
+		string config = getConfig();
+		if (config.length() == 0) return false;
+		string cmd = "wget -qO- " + esc + url + "?" + query + config + esc;
+		LOG(INFO) << "*************** "  << cmd;
+		FILE *result = popen(cmd.c_str(), "r");
+		if (!result) {
+			LOG(CRIT) << "popen call \"" << cmd << "\" failed";
+			return NULL;
+		}
+		// build map of responses, and list of apdus
+		map<string,string> response;
+		size_t nbytes = 1500;
+		char *line = (char*)malloc(nbytes+1);
+		while (!feof(result)) {
+			if (!fgets(line, nbytes, result)) break;
+			clean(line);
+			LOG(INFO) << "server return: " << line;
+			char *p = strchr(line, '=');
+			if (!p) continue;
+			string lhs = string(line, 0, p-line);
+			string rhs = string(line, p+1-line, string::npos);
+			if (lhs == "apdu") {
+				apdus.push_back(rhs);
+			} else {
+				response[lhs] = rhs;
+			}
+		}
+		free(line);
+		pclose(result);
+
+		// quit if error
+		if (response.find("error") != response.end()) {
+			LOG(INFO) << "error from server: " << response["error"];
+			return false;
+		}
+
+		// quit if ack from assist unless there are more apdu messages
+		if (response.find("ack") != response.end()) {
+			LOG(INFO) << "ack from mobile, decoded by server";
+			if (apdus.size() == 0) {
+				return true;
+			} else {
+				LOG(INFO) << "more apdu messages";
+			}
+		}
+
+		// quit if location decoded 
+		if (response.find("latitude") != response.end() && response.find("longitude") != response.end() && response.find("positionError") != response.end()) {
+			ostringstream os;
+			os << "insert into RRLP (name, latitude, longitude, error, time) values (" <<
+				'"' << name << '"' << "," <<
+				response["latitude"] << "," <<
+				response["longitude"] << "," <<
+				response["positionError"] << "," <<
+				"datetime('now')"
+			")";
+			LOG(INFO) << os.str();
+			if (!sqlite3_command(gSubscriberRegistry.db(), os.str().c_str())) {
+				LOG(INFO) << "sqlite3_command problem";
+				return false;
+			}
+			return true;
+		}
+
+		// bounce off mobile
+		if (apdus.size() == 0) {
+			LOG(INFO) << "missing apdu for mobile";
+			return false;
+		}
+		string apdu = apdus[0];
+		apdus.erase(apdus.begin());
+		BitVector bv(apdu.size()*4);
+		if (!bv.unhex(apdu.c_str())) {
+			LOG(INFO) << "BitVector::unhex problem";
+			return false;
+		}
+
+		DCCH->send(L3ApplicationInformation(bv));
+		// Receive an L3 frame with a timeout.  Timeout loc req response time max + 2 seconds.
+		L3Frame* resp = DCCH->recv(130000);
+		if (!resp) {
+			return false;
+		}
+		LOG(INFO) << "RRLPQuery returned " << *resp;
+		if (resp->primitive() != DATA) {
+			LOG(INFO) << "didn't receive data";
+			switch (resp->primitive()) {
+				case ESTABLISH: LOG(INFO) << "channel establihsment"; break;
+				case RELEASE: LOG(INFO) << "normal channel release"; break;
+				case DATA: LOG(INFO) << "multiframe data transfer"; break;
+				case UNIT_DATA: LOG(INFO) << "datagram-type data transfer"; break;
+				case ERROR: LOG(INFO) << "channel error"; break;
+				case HARDRELEASE: LOG(INFO) << "forced release after an assignment"; break;
+				default: LOG(INFO) << "unrecognized primitive response"; break;
+			}
+			delete resp;
+			return false;
+		}
+		const unsigned PD_RR = 6;
+		LOG(INFO) << "resp.pd = " << resp->PD();
+		if (resp->PD() != PD_RR) {
+			LOG(INFO) << "didn't receive an RR message";
+			delete resp;
+			return false;
+		}
+		const unsigned MTI_RR_STATUS = 18;
+		if (resp->MTI() == MTI_RR_STATUS) {
+			ostringstream os2;
+			int cause = resp->peekField(16, 8);
+			delete resp;
+			switch (cause) {
+				case 97:
+					LOG(INFO) << "MS says: message not implemented";
+					// flag unsupported in SR so we don't waste time on it again
+					os2 << "update sip_buddies set RRLPSupported = \"0\" where name = \"" << name << "\"";
+					if (!sqlite3_command(gSubscriberRegistry.db(), os2.str().c_str())) {
+						LOG(INFO) << "sqlite3_command problem";
+					}
+					return false;
+				case 98:
+					LOG(INFO) << "MS says: message type not compatible with protocol state";
+					return false;
+				default:
+					LOG(INFO) << "unknown RR_STATUS response, cause = " << cause;
+					return false;
+			}
+		}
+		const unsigned MTI_RR_APDU = 56;
+		if (resp->MTI() != MTI_RR_APDU) {
+			LOG(INFO) << "received unexpected RR Message " << resp->MTI();
+			delete resp;
+			return false;
+		}
+
+		// looks like a good APDU
+		BitVector *bv2 = (BitVector*)resp;
+		BitVector bv3 = bv2->tail(32);
+		ostringstream os;
+		bv3.hex(os);
+		apdu = os.str();
+		delete resp;
+
+		// next query for server
+		query = "query=apdu&apdu=" + apdu;
+	}
+	// not reached
+}
+
 /**
 	Controller for the Location Updating transaction, GSM 04.08 4.4.4.
 	@param lur The location updating request.
@@ -185,11 +442,22 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		return;
 	}
 
+	if (gConfig.defines("Control.LUR.QueryRRLP")) {
+		// Query for RRLP
+		RRLPServer wRRLPServer(mobileID, DCCH);
+		if (!wRRLPServer.assist()) {
+			LOG(INFO) << "RRLPServer::assist problem";
+		}
+		// can still try to check location even if assist didn't work
+		if (!wRRLPServer.locate()) {
+			LOG(INFO) << "RRLPServer::locate problem";
+		}
+	}
 	// This allows us to configure Open Registration
 	bool openRegistration = gConfig.defines("Control.LUR.OpenRegistration");
 
 	// Query for IMEI?
-	if (gConfig.defines("Control.LUR.QueryIMEI")) {
+	if (IMSIAttach && gConfig.defines("Control.LUR.QueryIMEI")) {
 		DCCH->send(L3IdentityRequest(IMEIType));
 		L3Message* msg = getMessage(DCCH);
 		L3IdentityResponse *resp = dynamic_cast<L3IdentityResponse*>(msg);
@@ -201,8 +469,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 			throw UnexpectedMessage();
 		}
 		LOG(INFO) << *resp;
-		string new_imei = resp->mobileID().digits();
-		if (!gTMSITable.IMEI(IMSI,new_imei.c_str())){
+		if (!gTMSITable.IMEI(IMSI,resp->mobileID().digits()))
 			LOG(WARNING) << "failed access to TMSITable";
 		} 
 
@@ -240,7 +507,71 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		if (!gTMSITable.classmark(IMSI,classmark))
 			LOG(WARNING) << "failed access to TMSITable";
 		delete msg;
-	}
+	    }
+/**Authentication Procedures, GSM 04.08 4.3.2.*/
+DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+
+LOG(INFO) << "Authentication Request Sent";
+
+L3Message* msg = getMessage(DCCH);
+LOG(INFO) << *msg<< "Authentication Response";
+
+L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
+  if (!resp) {
+   if (msg) {
+    LOG(WARNING) << "Unexpected message " << *msg;
+    delete msg;
+   }
+   throw UnexpectedMessage();
+  }
+LOG(INFO) << *resp<< "Response Recieved";
+
+
+const char* imsi;
+imsi = mobileID.digits();
+if (gConfig.defines("Control.KiTable.SavePath")) {
+	LOG(INFO) << "IMSI=" << imsi;
+	gKiTable.loadAndFindKI(imsi);
+	//LOG(INFO) << "Ki = " << gKiTable.getKi(); // pointless getKi() returns pointer
+
+	GSM::L3RAND mRand(6,9);//FIXME:use right numbers
+
+	for (int i=0;i<16;i++)
+		LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+
+	uint64_t Kc;
+	uint8_t SRES[4];
+	comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	mobileID.setKC(Kc);
+	LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
+
+    if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
+    {/**	Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
+	LOG(INFO) << "Ciphering Command Will Send";
+        DCCH->send(GSM::L3CipheringModeCommand());
+	LOG(INFO) << "Ciphering Command Sent";
+
+	L3Frame* resp = DCCH->recv();
+	LOG(INFO) << "Received";
+	if (!resp) { LOG(NOTICE) << "Ciphering Error"; } 
+	else { LOG(INFO) << *resp <<"Responce"; }
+	delete resp;
+
+    LOG(INFO) << "Ciphering Completed";
+    }
+    else
+    { // If the IMSI has been used, TMSI Case has been neglected as it is never Used.
+
+        DCCH->send(L3AuthenticationReject());
+    	LOG(INFO) <<  "Authentication Reject";
+        // Release the channel and return.
+        DCCH->send(L3ChannelRelease());
+	LOG(INFO) << "Channel Release";
+        DCCH->send(L3CMServiceReject(0x06));
+	LOG(INFO) << "CM Service Reject";
+        return;
+    }
+}
 
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {

@@ -201,6 +201,9 @@ L1Encoder::L1Encoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC *wParent)
 	ostringstream ss;
 	ss << wMapping.typeAndOffset();
 	sprintf(mDescriptiveString,"C0T%d %s", wTN, ss.str().c_str());
+
+	Kc_set = false;
+	cipherMode = false;
 }
 
 
@@ -531,6 +534,7 @@ XCCHL1Decoder::XCCHL1Decoder(
 	mP(mU.segment(184,40)),mDP(mU.head(224)),mD(mU.head(184))
 {
 	for (int i=0; i<4; i++) {
+	    mE[i] = SoftVector(114);
 		mI[i] = SoftVector(114);
 		// Fill with zeros just to make Valgrind happy.
 		mI[i].fill(.0);
@@ -550,6 +554,7 @@ void XCCHL1Decoder::writeLowSide(const RxBurst& inBurst)
 	// Accept the burst into the deinterleaving buffer.
 	// Return true if we are ready to interleave.
 	if (!processBurst(inBurst)) return;
+	decrypt();
 	deinterleave();
 	if (decode()) {
 		countGoodFrame();
@@ -579,12 +584,19 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 
 	// Pull the data fields (e-bits) out of the burst and put them into i[B][].
 	// GSM 05.03 4.1.5
+/*
 	inBurst.data1().copyToSegment(mI[B],0);
 	inBurst.data2().copyToSegment(mI[B],57);
 
+*/
 	// If the burst index is 0, save the time
 	if (B==0)
 		mReadTime = inBurst.time();
+    LOG(INFO) << "XCCHL1Decoder PROCESS BURST";
+	inBurst.data1().copyToSegment(mE[B],0);
+	LOG(INFO) << "XCCHL1Decoder PROCESS BURST copytosegment data 1 done";
+	inBurst.data2().copyToSegment(mE[B],57);
+	LOG(INFO) << "XCCHL1Decoder PROCESS BURST copytosegment done";
 
 	// If the burst index is 3, then this is the last burst in the L2 frame.
 	// Return true to indicate that we are ready to deinterleave.
@@ -598,7 +610,26 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 }
 
 
+void XCCHL1Decoder::decrypt()
+{
 
+for (int B=0; B<4; B++)
+	{
+	if(channelType()==SDCCHType)
+	{
+	LOG(INFO)<< "xCCH deCRYPT frmae number" << ((mCount.T1()<<11)|(mCount.T3()<<5)|mCount.T2());
+//	mI[B]=mE[B]^keyStreamUL;
+	mI[B]=mE[B];
+    LOG(INFO) <<"XCCHL1Decoder  Decrypt";
+	}
+	else
+	{
+	mI[B]=mE[B];
+	LOG(INFO) <<"XCCHL1Decoder ELSE";
+	}
+	}
+
+}
 
 void XCCHL1Decoder::deinterleave()
 {
@@ -888,6 +919,123 @@ void XCCHL1Encoder::transmit()
 	}
 }
 
+SDCCHL1Encoder::SDCCHL1Encoder(
+	unsigned wTN,
+	const TDMAMapping& wMapping,
+	L1FEC *wParent)
+	:XCCHL1Encoder(wTN, wMapping, wParent)
+	{
+		// Set up the interleaving buffers.
+	for(int k = 0; k<4; k++) {
+	    mE[k] = BitVector(114);
+		mI[k] = BitVector(114);
+		// Fill with zeros just to make Valgrind happy.
+		mI[k].fill(0);
+		mE[k].fill(0);
+	}
+
+	mFillerBurst = TxBurst(gDummyBurst);
+
+	// Set up the training sequence and stealing bits
+	// since they'll be the same for all bursts.
+
+	// stealing bits for a control channel, GSM 05.03 4.2.5, 05.02 5.2.3.
+	mBurst.Hl(1);
+	mBurst.Hu(1);
+	// training sequence, GSM 05.02 5.2.3
+	gTrainingSequence[mTSC].copyToSegment(mBurst,61);
+
+	// zero out u[] to take care of tail fields
+	mU.zero();
+}
+
+
+/*
+void SDCCHL1Encoder::start()
+{
+	L1Encoder::start();
+	LOG(INFO) <<"SDCCHL1Encoder";
+	//mEncoderThread.start((void*(*)(void*))SDCCHL1EncoderRoutine,(void*)this);
+}
+*/
+/*
+void SDCCHL1Encoder::open()
+{
+	// There was over stuff here at one time to justify overriding the default.
+	// But it's gone now.
+	XCCHL1Encoder::open();
+}
+*/
+
+void SDCCHL1Encoder::encrypt()
+{
+
+for (int B=0; B<4; B++)
+	{
+//		mE[B]=mI[B]^keyStreamDL;
+        mE[B]=mI[B];
+        LOG(INFO) <<"SDCCHL1Encoder  ENCRYPT";
+	}
+}
+void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
+{
+	OBJLOG(DEBUG) << "SDCCHL1Encoder " << frame;
+	// Make sure there's something down there to take the busts.
+	LOG(INFO) << "SDCCHL1Encoder  SENDFRAME";
+	if (mDownstream == NULL) {
+		LOG(INFO) << "SDCCHL1Encoder with no downstream";
+		return;
+	}
+
+	// This comes from GSM 05.03 4.1
+
+	// Copy the L2 frame into u[] for processing.
+	// GSM 05.03 4.1.1.
+	//assert(mD.size()==headerOffset()+frame.size());
+	frame.copyToSegment(mU,headerOffset());
+	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
+	mD.LSB8MSB();
+	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
+	encode();			// Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
+	LOG(INFO) << "SDCCHL1ENCODER ENCODED";
+	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
+	LOG(INFO) << "SDCCHL1ENCODER INTERLEAVED";
+	encrypt();			// Encrypt i[][] to e[].
+	LOG(INFO) << "SDCCHL1ENCODER ENCRYPTED";
+	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
+	LOG(INFO) << "SDCCHL1ENCODER TRANSMITTED";
+	// FIXME: is this FN OK, or do we need to back it up by 4?
+	//gWriteGSMTAP(ARFCN(),mTN,mPrevWriteTime.FN(),frame);
+}
+void SDCCHL1Encoder::transmit()
+{
+	// Format the bits into the bursts.
+	// GSM 05.03 4.1.5, 05.02 5.2.3
+
+	waitToSend();		// Don't get too far ahead of the clock.
+
+	if (!mDownstream) {
+		// For some testing, we might not have a radio connected.
+		// That's OK, as long as we know it.
+		LOG(INFO) << "XCCHL1Encoder with no radio, dumping frames";
+		return;
+	}
+
+for (int B = 0; B < 4; B++) {
+		mBurst.time(mNextWriteTime);
+		// Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
+		OBJLOG(DEBUG) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
+		LOG(INFO) <<"SDCCHL1Encoder  TRANSMIT";
+		LOG(INFO) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
+		mE[B].segment(0,57).copyToSegment(mBurst,3);
+		mE[B].segment(57,57).copyToSegment(mBurst,88);
+		// Send it to the radio.
+		OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
+		LOG(INFO) << "SDCCHL1Encoder mBurst=" << mBurst;
+		mDownstream->writeHighSide(mBurst);
+		rollForward();
+	}
+}
 
 
 void GeneratorL1Encoder::start()
@@ -1045,9 +1193,11 @@ TCHFACCHL1Decoder::TCHFACCHL1Decoder(
 	mTCHParity(0x0b,3,50)
 {
 	for (int i=0; i<8; i++) {
+	    mE[i] = SoftVector(114);
 		mI[i] = SoftVector(114);
 		// Fill with zeros just to make Valgrind happy.
 		mI[i].fill(.0);
+		mE[i].fill(.0);
 	}
 }
 
@@ -1087,8 +1237,14 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 
 	// Pull the data fields (e-bits) out of the burst and put them into i[B][].
 	// GSM 05.03 3.1.4
-	inBurst.data1().copyToSegment(mI[B],0);
-	inBurst.data2().copyToSegment(mI[B],57);
+//	inBurst.data1().copyToSegment(mI[B],0);
+//	inBurst.data2().copyToSegment(mI[B],57);
+
+//////////////////////////////////////////////////////////////////////////////////
+	inBurst.data1().copyToSegment(mE[B],0);
+		LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT1";
+	inBurst.data2().copyToSegment(mE[B],57);
+		LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT2";
 
 	// Every 4th frame is the start of a new block.
 	// So if this isn't a "4th" frame, return now.
@@ -1097,8 +1253,24 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	// Deinterleave according to the diagonal "phase" of B.
 	// See GSM 05.03 3.1.3.
 	// Deinterleaves i[] to c[]
-	if (B==3) deinterleave(4);
-	else deinterleave(0);
+//	if (B==3) deinterleave(4);
+//	else deinterleave(0);
+	
+	if (B==3)
+	{
+	  LOG(INFO) <<"TCH PROCESS BURST ";
+	  decrypt();
+	  LOG(INFO) <<"TCH PROCESS BURST DECRYPTED";
+	  deinterleave(4);
+	  LOG(INFO) <<"TCH PROCESS BURST INTERLEAVED";
+	}
+	else
+	{
+	  decrypt();
+	  LOG(INFO) <<"TCH PROCESS BURST 1";
+	  deinterleave(0);
+	  LOG(INFO) <<"TCH PROCESS BURST 2";
+	}
 
 	// See if this was the end of a stolen frame, GSM 05.03 4.2.5.
 	bool stolen = inBurst.Hl();
@@ -1132,6 +1304,15 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 
 
 
+void TCHFACCHL1Decoder::decrypt()
+{
+for (int B = 0; B < 8; B++)
+	{
+	//mI[B+blockOffset]=mE[B+blockOffset]^keyStreamUL;
+	mI[B] = mE[B];
+	LOG(INFO) <<"TCHFACCHL1Decoder  decrypt ";
+	}
+}
 
 void TCHFACCHL1Decoder::deinterleave(int blockOffset )
 {
@@ -1251,9 +1432,11 @@ TCHFACCHL1Encoder::TCHFACCHL1Encoder(
 	mTCHParity(0x0b,3,50)
 {
 	for(int k = 0; k<8; k++) {
+	    mE[k] = BitVector(114);
 		mI[k] = BitVector(114);
 		// Fill with zeros just to make Valgrind happy.
 		mI[k].fill(0);
+		mE[k].fill(0);
 	}
 }
 
@@ -1385,10 +1568,13 @@ void TCHFACCHL1Encoder::dispatch()
 	// Interleave c[] to i[].
 	interleave(mOffset);
 
+	LOG(INFO)<<"TCH START ENCRYPT";
+	encrypt();
+	LOG(INFO)<<"TCH START ENCRYPTed";
 	// "mapping on a burst"
 	// Map c[] into outgoing normal bursts, marking stealing flags as needed.
 	// GMS 05.03 3.1.4.
-	for (int B=0; B<4; B++) {
+/*	for (int B=0; B<4; B++) {
 		// set TDMA position
 		mBurst.time(mNextWriteTime);
 		// copy in the bits
@@ -1402,7 +1588,23 @@ void TCHFACCHL1Encoder::dispatch()
 		mDownstream->writeHighSide(mBurst);	
 		rollForward();
 	}	
-
+*/
+	for (int B=0; B<8; B++) {
+		// set TDMA position
+		mBurst.time(mNextWriteTime);
+		// copy in the bits
+		
+		mE[B].segment(0,57).copyToSegment(mBurst,3);
+		mE[B].segment(57,57).copyToSegment(mBurst,88);
+		LOG(INFO) <<"TCHFACCHL1Decoder  COPYTOSEGMENT";
+		// stealing bits
+		mBurst.Hu(currentFACCH);
+		mBurst.Hl(mPreviousFACCH);
+		// send
+		OBJLOG(DEBUG) <<"TCHFACCHEncoder sending burst=" << mBurst;
+		mDownstream->writeHighSide(mBurst);
+		rollForward();
+	}
 	// Updaet the offset for the next transmission.
 	if (mOffset==0) mOffset=4;
 	else mOffset=0;
@@ -1420,6 +1622,18 @@ void TCHFACCHL1Encoder::interleave(int blockOffset)
 		int B = ( k + blockOffset ) % 8;
 		int j = 2*((49*k) % 57) + ((k%8)/4);
 		mI[B][j] = mC[k];
+	}
+}
+
+
+void TCHFACCHL1Encoder::encrypt()
+{
+
+for (int B=0; B<8; B++)
+	{
+		//mE[B+blockOffset]=mI[B+blockOffset]^keyStreamDL;
+		mE[B]=mI[B];
+		LOG(INFO) <<"TCHFACCHL1Encoder  encrypt";
 	}
 }
 

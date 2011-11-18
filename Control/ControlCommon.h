@@ -131,6 +131,9 @@ void DCCHDispatcher(GSM::LogicalChannel *DCCH);
 */
 unsigned  resolveIMSI(bool sameLAI, GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
+        
+unsigned char*  resolveKI( GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
+
 /**
 	Resolve a mobile ID to an IMSI.
 	@param mobID A mobile ID, that may be modified by the function.
@@ -138,9 +141,71 @@ unsigned  resolveIMSI(bool sameLAI, GSM::L3MobileIdentity& mobID, GSM::LogicalCh
 */
 void  resolveIMSI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
+/*
+  Resolve a mobile ID to a Ki.
+ */
+unsigned char*  resolveKI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
+class KiRecord {
+		
+	private:
+		
+		std::string mIMSI;
+		std::string mKi;
+		//std::string mIMEI;
+		//Timeval mCreated;				///< Time when this TMSI was created.
+		mutable Timeval mTouched;		///< Time when this TMSI was last accessed.
+		
+	public:
+          
+		KiRecord() {}
+		const char* IMSI() const { return mIMSI.c_str(); }
+		const unsigned char* Ki() const { return (unsigned char*) mKi.c_str(); }
+               
+		void touch() const { mTouched.now(); }
+		
+		/** Record age in seconds. */
+		//unsigned age() const { return mCreated.elapsed()/1000; }
+		
+		/** Time since last access in seconds. */
+		//unsigned touched() const { return mTouched.elapsed()/1000; }
+		
+		//void save(unsigned Ki, FILE*) const;
+		
+		/**
+		 Load a Ki record from a file.
+		 @return Ki or 0 on read failure.
+		 */
+		bool load(FILE*);
+		
+	};
+	typedef std::map<unsigned,KiRecord> KiMap;
 
-
+	class KiTable {
+		
+	private:
+                
+                mutable Mutex mLock;///< Ki/IMSI mapping
+				unsigned char Ki[16];
+				uint32_t frameNumber;
+				const char* _imsi;
+		
+	public:
+	
+		KiTable(){
+                  
+		}
+		unsigned char* getKi(){return Ki;};
+		bool loadAndFindKI(const char* IMSI);
+                int hextoint(char x);
+		unsigned char* getRand(const char *rand);
+		void setFrameNumber(uint32_t FN);
+		uint32_t getFrameNumber();
+        void setIMSI(const char* imsi);
+		const char* getIMSI();        
+		
+		
+	};
 
 
 
@@ -220,7 +285,7 @@ class Q931TimerExpired : public ControlLayerException {
 extern Control::TransactionTable gTransactionTable;
 //@}
 
-
+extern Control::KiTable gKiTable;
 
 #endif
 
