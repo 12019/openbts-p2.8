@@ -1,0 +1,3 @@
+* add complete ciphering implementation
+* use sqlite for Ki
+* cleanup all FIXME
