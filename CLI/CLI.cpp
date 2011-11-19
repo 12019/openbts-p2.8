@@ -320,10 +320,10 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
   return SUCCESS;
 }
 
-int findki(int argc, char** argv, ostream& os, istream& is) 
+int findKi(int argc, char** argv, ostream& os, istream& is) 
 {
     if (argc != 2) {
-	os << "usage: findki <imsiprefix>\n";
+	os << "usage: findki <imsi>\n";
 	return BAD_VALUE;
     }
 
@@ -335,6 +335,27 @@ int findki(int argc, char** argv, ostream& os, istream& is)
   
     return SUCCESS;
 }
+
+int setKi(int argc, char** argv, ostream& os, istream& is) 
+{
+    if (argc != 3) {
+	os << "usage: setki <imsi> <ki>\n";
+	return BAD_VALUE;
+    }
+
+    const char * imsi = argv[1];
+    const char * ki = argv[2];
+    if(strnlen(ki, 16) != 16) {
+	os << "Ki must be 16 bytes long.\n";
+	return BAD_VALUE;
+    }
+    gTMSITable.setKi(imsi, ki);
+    LOG(DEBUG) << "Ki = " << ki << "set for IMSI = "<< imsi;
+    os << "ki=" << ki << "imsi=" << imsi << endl;
+  
+    return SUCCESS;
+}
+
 
 /** Submit an SMS for delivery to an IMSI. */
 int sendsimple(int argc, char** argv, ostream& os, istream& is)
@@ -793,7 +814,8 @@ void Parser::addCommands()
 	addCommand("help", showHelp, "[command] -- list available commands or gets help on a specific command.");
 	addCommand("exit", exit_function, "[wait] -- exit the application, either immediately, or waiting for existing calls to clear with a timeout in seconds");
 	addCommand("tmsis", tmsis, "[\"clear\"] or [\"dump\" filename] -- print/clear the TMSI table or dump it to a file.");
-	addCommand("findki", findki, "[KIPrefix] -- prints all ki's that are prefixed by KIPrefix");
+	addCommand("findki", findKi, "[KIPrefix] -- prints all ki's that are prefixed by KIPrefix");
+	addCommand("setki", setKi, "[imsi] -- set Ki (secret key) value for given IMSI.");
 	addCommand("testA3", testA3, "-- testA3");
 	addCommand("sendsms", sendsms, "<IMSI> <src> -- send direct SMS to <IMSI>, addressed from <src>, after prompting.");
 	addCommand("sendsimple", sendsimple, "<IMSI> <src> -- send SMS to <IMSI> via SIP interface, addressed from <src>, after prompting.");
