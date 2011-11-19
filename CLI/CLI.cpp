@@ -299,15 +299,15 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
     LOG(DEBUG) << "imsi = " << imsi;
     gKiTable.loadAndFindKI(imsi);
     LOG(INFO) << "Ki = " << gKiTable.getKi();
-    
+    uint8_t rnd[16];
     GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
-    for (int i = 0; i < 16; i++)
-      LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+    mRand.getRandToA3A8((uint8_t *)&rnd);
+    LOG(INFO) << "RANDTesting = " << rnd << "<--";
 
     uint64_t Kc;
     unsigned int SRES;
     
-    comp128(gKiTable.getKi(), mRand.getRandToA3A8(), (uint8_t *)&SRES, (uint8_t *)&Kc);
+    comp128(gKiTable.getKi(), rnd, (uint8_t *)&SRES, (uint8_t *)&Kc);
     
     LOG(DEBUG) << "Kc = " << Kc;
     os << "kc=" << Kc << endl;

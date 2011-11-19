@@ -681,12 +681,13 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 
 	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used
 
-	  for (int i = 0; i < 16; i++)
-	    LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+	  uint8_t rand[16];
+	  mRand.getRandToA3A8((uint8_t *)&rand);
+	    LOG(INFO) << "RANDTesting = " << rand << "<--";
 
 	  uint64_t Kc;
 	  uint8_t SRES[4];
-	  comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	  comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
 	  mobileID.setKC(Kc);
 
 	  if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
@@ -1003,12 +1004,13 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 
 	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used;
 
-	  for (int i=0;i<16;i++)
-	    LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+	  uint8_t rand[16];
+	  mRand.getRandToA3A8((uint8_t *)rand);
+	    LOG(INFO) << "RANDTesting = " << rand << "<--";
     
 	  uint64_t Kc;
 	  uint8_t SRES[4];
-	  comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	  comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
 	  mobID.setKC(Kc);
 
 	  if(response->checkSRES(SRES)) // Comparison between SRES and Resp
