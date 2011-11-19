@@ -655,12 +655,23 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// get registered.
 
 	/* Authentication Procedures, GSM 04.08 4.3.2.*/
-	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+	srand((unsigned)time(NULL));
+	GSM::L3RAND RAND(rand(),rand());
+	const char* imsi;
+	imsi = mobileID.digits();
+	LOG(INFO) << "imsi = " << imsi;
+	LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
+	uint8_t rand[16];
+	RAND.getRandToA3A8((uint8_t *)&rand);
+	LOG(INFO) << "RANDTesting = " << rand << "<--";
+	gTMSITable.setRAND(imsi, (char *)rand);
+//FIXME: use proper sequence number
+	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), RAND));
 
 	LOG(INFO) << "Authentication Request Sent ";
 
 	GSM::L3Message * msg = getMessage(LCH);
-	LOG(INFO) << *msg<< "Authentication Response ";
+	LOG(INFO) << *msg << "Authentication Response ";
 
 	GSM::L3AuthenticationResponse *resp = dynamic_cast<GSM::L3AuthenticationResponse*>(msg);
 	if (!resp) {
@@ -672,21 +683,10 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	}
 	LOG(INFO) << *resp << "Response Recieved ";
 
-	const char* imsi;
-	imsi = mobileID.digits();
-	  LOG(INFO) << "imsi = " << imsi;
-	  LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-
-	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used
-
-	  uint8_t rand[16];
-	  mRand.getRandToA3A8((uint8_t *)&rand);
-	    LOG(INFO) << "RANDTesting = " << rand << "<--";
-
-	  uint64_t Kc;
-	  uint8_t SRES[4];
-	  comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
-	  mobileID.setKC(Kc);
+	uint64_t Kc;
+	uint8_t SRES[4];
+	comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
+	mobileID.setKC(Kc);
 
 	  if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
 	    {/**Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
@@ -976,12 +976,21 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	assert(L3TI<7);
 
 	/* Authentication Procedures, GSM 04.08 4.3.2.*/
-	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
+	GSM::L3RAND RAND(rand(), rand());
+	const char * imsi;
+	imsi = mobID.digits();
+	LOG(INFO) << "imsi = " << imsi;
+	LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
+	uint8_t rand[16];
+	RAND.getRandToA3A8((uint8_t *)rand);
+	LOG(INFO) << "RANDTesting = " << rand << "<--";
+//FIXME: use proper sequence number
+	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), RAND));
 
 	LOG(INFO) << "Authentication Request Sent";
 
-	GSM::L3Message* msg = getMessage(LCH);
-	LOG(INFO) << *msg<< "Authentication Response";
+	GSM::L3Message * msg = getMessage(LCH);
+	LOG(INFO) << *msg << "Authentication Response";
 
 	GSM::L3AuthenticationResponse *response = dynamic_cast<GSM::L3AuthenticationResponse*>(msg);
 	if (!response) {
@@ -993,16 +1002,6 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	}
 	LOG(INFO) << *response << "Response Recieved";
 
-	const char * imsi;
-	imsi = mobID.digits();
-	  LOG(INFO) << "imsi = " << imsi;
-	  LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-
-	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used;
-
-	  uint8_t rand[16];
-	  mRand.getRandToA3A8((uint8_t *)rand);
-	    LOG(INFO) << "RANDTesting = " << rand << "<--";
     
 	  uint64_t Kc;
 	  uint8_t SRES[4];
