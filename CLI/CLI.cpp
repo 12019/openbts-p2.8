@@ -294,11 +294,8 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
   
   const char *imsi = argv[1];
     
-  if (gConfig.defines("Control.Reporting.KiTable")) {
-    
     LOG(DEBUG) << "imsi = " << imsi;
-    gKiTable.loadAndFindKI(imsi);
-    LOG(INFO) << "Ki = " << gKiTable.getKi();
+    LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
     uint8_t rnd[16];
     GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
     mRand.getRandToA3A8((uint8_t *)&rnd);
@@ -307,7 +304,7 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
     uint64_t Kc;
     unsigned int SRES;
     
-    comp128(gKiTable.getKi(), rnd, (uint8_t *)&SRES, (uint8_t *)&Kc);
+    comp128((uint8_t *)gTMSITable.getKi(imsi), rnd, (uint8_t *)&SRES, (uint8_t *)&Kc);
     
     LOG(DEBUG) << "Kc = " << Kc;
     os << "kc=" << Kc << endl;
@@ -315,35 +312,28 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
     os << "SRES=" << SRES << endl;
 
     uint32_t frameno;
-    frameno = gKiTable.getFrameNumber();
+    frameno = 123456;//FIXME: use normal test value
     LOG(DEBUG) << "frameNumber = " << frameno;
 
     ubit_t uplink[114], downlink[114];
     osmo_a5_1((uint8_t *)&Kc, frameno, downlink, uplink);
-  }
-  else {
-    os << " FIXME: error: bad value " << endl;
-    return BAD_VALUE;
-  }
   return SUCCESS;
 }
 
 int findki(int argc, char** argv, ostream& os, istream& is) 
 {
-  if (argc != 2) {
-    os << "usage: findki <imsiprefix>\n";
-    return BAD_VALUE;
-  }
+    if (argc != 2) {
+	os << "usage: findki <imsiprefix>\n";
+	return BAD_VALUE;
+    }
 
-  const char *imsi = argv[1];
-  LOG(DEBUG) << "KIYaRAB3 = " << imsi;
-  if (gConfig.defines("Control.Reporting.KiTable")) {
-    gKiTable.loadAndFindKI(imsi);
-    unsigned char* ki = gKiTable.getKi();
-    LOG(DEBUG) << "KIGedid = " << ki;
+    const char * imsi = argv[1];
+    LOG(DEBUG) << "Ki for IMSI " << imsi;
+    const char * ki = gTMSITable.getKi(imsi);
+    LOG(DEBUG) << "Ki = " << ki;
     os << "ki=" << ki << endl;
-  }
-  return SUCCESS;
+  
+    return SUCCESS;
 }
 
 /** Submit an SMS for delivery to an IMSI. */
