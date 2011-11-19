@@ -536,12 +536,13 @@ if (gConfig.defines("Control.KiTable.SavePath")) {
 
 	GSM::L3RAND mRand(6,9);//FIXME:use right numbers
 
-	for (int i=0;i<16;i++)
-		LOG(INFO) << "RANDTesting = " << int(mRand.getRandToA3A8()[i]);
+	uint8_t rand[16];
+	mRand.getRandToA3A8((uint8_t *)rand);
+	LOG(INFO) << "RANDTesting = " << rand << "<--";
 
 	uint64_t Kc;
 	uint8_t SRES[4];
-	comp128(gKiTable.getKi(), mRand.getRandToA3A8(), SRES, (uint8_t *)&Kc);
+	comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
 	mobileID.setKC(Kc);
 	LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
 
