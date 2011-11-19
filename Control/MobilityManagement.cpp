@@ -508,39 +508,42 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 			LOG(WARNING) << "failed access to TMSITable";
 		delete msg;
 	    }
-/**Authentication Procedures, GSM 04.08 4.3.2.*/
-DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), GSM::L3RAND(6,9)));//FIXME: use actual numbers
 
-LOG(INFO) << "Authentication Request Sent";
+    /**Authentication Procedures, GSM 04.08 4.3.2.*/
+    srand((unsigned)time(NULL));
+    GSM::L3RAND RAND(rand(), rand());
+    uint8_t rand[16];
+    RAND.getRandToA3A8((uint8_t *)rand);
+    const char* imsi;
+    imsi = mobileID.digits();
+    LOG(INFO) << "IMSI=" << imsi;
+    LOG(INFO) << "RANDTesting = " << rand << "<--";
 
-L3Message* msg = getMessage(DCCH);
-LOG(INFO) << *msg<< "Authentication Response";
+    gTMSITable.setRAND(imsi, (char *)rand);
+    LOG(DEBUG) << "RAND " << rand << " set for IMSI " << imsi;
+//FIXME: use proper sequence number     
+    DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), RAND));
 
-L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
-  if (!resp) {
-   if (msg) {
-    LOG(WARNING) << "Unexpected message " << *msg;
-    delete msg;
-   }
-   throw UnexpectedMessage();
-  }
-LOG(INFO) << *resp<< "Response Recieved";
+    LOG(INFO) << "Authentication Request Sent";
 
-const char* imsi;
-imsi = mobileID.digits();
-LOG(INFO) << "IMSI=" << imsi;
+    L3Message* msg = getMessage(DCCH);
+    LOG(INFO) << *msg << "Authentication Response";
 
-GSM::L3RAND mRand(6,9);//FIXME:use right numbers
+    L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
+    if (!resp) {
+	if (msg) {
+	    LOG(WARNING) << "Unexpected message " << *msg;
+	    delete msg;
+	}
+	throw UnexpectedMessage();
+    }
+    LOG(INFO) << *resp<< "Response Recieved";
 
-uint8_t rand[16];
-mRand.getRandToA3A8((uint8_t *)rand);
-LOG(INFO) << "RANDTesting = " << rand << "<--";
-
-uint64_t Kc;
-uint8_t SRES[4];
-comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
-mobileID.setKC(Kc);
-LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
+    uint64_t Kc;
+    uint8_t SRES[4];
+    comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
+    mobileID.setKC(Kc);
+    LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
 
     if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
     {/**	Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
