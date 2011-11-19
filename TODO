@@ -1,3 +1,4 @@
+* properly set Kc and key sequence number
 * add complete ciphering implementation
-* use sqlite for Ki
+* use sqlite for Ki [DONE]
 * cleanup all FIXME
