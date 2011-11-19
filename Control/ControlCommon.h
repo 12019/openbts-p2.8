@@ -181,34 +181,6 @@ class KiRecord {
 	};
 	typedef std::map<unsigned,KiRecord> KiMap;
 
-	class KiTable {
-		
-	private:
-                
-                mutable Mutex mLock;///< Ki/IMSI mapping
-				unsigned char Ki[16];
-				uint32_t frameNumber;
-				const char* _imsi;
-		
-	public:
-	
-		KiTable(){
-                  
-		}
-		unsigned char* getKi(){return Ki;};
-		bool loadAndFindKI(const char* IMSI);
-                int hextoint(char x);
-		unsigned char* getRand(const char *rand);
-		void setFrameNumber(uint32_t FN);
-		uint32_t getFrameNumber();
-        void setIMSI(const char* imsi);
-		const char* getIMSI();        
-		
-		
-	};
-
-
-
 /**@name Control-layer exceptions. */
 //@{
 
@@ -284,8 +256,6 @@ class Q931TimerExpired : public ControlLayerException {
 /** A single global transaction table in the global namespace. */
 extern Control::TransactionTable gTransactionTable;
 //@}
-
-extern Control::KiTable gKiTable;
 
 #endif
 

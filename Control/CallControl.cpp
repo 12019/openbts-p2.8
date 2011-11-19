@@ -719,10 +719,8 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 
 	const char* imsi;
 	imsi = mobileID.digits();
-	if (gConfig.defines("Control.KiTable.SavePath")) {
 	  LOG(INFO) << "imsi = " << imsi;
-	  gKiTable.loadAndFindKI(imsi);
-	  LOG(INFO) << "Ki = " << gKiTable.getKi();
+	  LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
 
 	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used
 
@@ -732,7 +730,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 
 	  uint64_t Kc;
 	  uint8_t SRES[4];
-	  comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
+	  comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
 	  mobileID.setKC(Kc);
 
 	  if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
@@ -759,7 +757,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
         
 	      return;
 	    }
-	}
+	
 
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
@@ -1059,10 +1057,8 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 
 	const char * imsi;
 	imsi = mobID.digits();
-	if (gConfig.defines("Control.KiTable.SavePath")) {
 	  LOG(INFO) << "imsi = " << imsi;
-	  gKiTable.loadAndFindKI(imsi);
-	  LOG(INFO) << "Ki = " << gKiTable.getKi();
+	  LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
 
 	  GSM::L3RAND mRand(6,9);//FIXME - junk numbers used;
 
@@ -1072,7 +1068,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
     
 	  uint64_t Kc;
 	  uint8_t SRES[4];
-	  comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
+	  comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
 	  mobID.setKC(Kc);
 
 	  if(response->checkSRES(SRES)) // Comparison between SRES and Resp
@@ -1099,7 +1095,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	      LOG(INFO) << "CM Service Reject";
 	      return;
 	    }
-	}
+	
 
 	// GSM 04.08 5.2.2.1
 	LOG(INFO) << "sending GSM Setup to call " << transaction->calling();

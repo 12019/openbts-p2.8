@@ -526,25 +526,21 @@ L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
   }
 LOG(INFO) << *resp<< "Response Recieved";
 
-
 const char* imsi;
 imsi = mobileID.digits();
-if (gConfig.defines("Control.KiTable.SavePath")) {
-	LOG(INFO) << "IMSI=" << imsi;
-	gKiTable.loadAndFindKI(imsi);
-	//LOG(INFO) << "Ki = " << gKiTable.getKi(); // pointless getKi() returns pointer
+LOG(INFO) << "IMSI=" << imsi;
 
-	GSM::L3RAND mRand(6,9);//FIXME:use right numbers
+GSM::L3RAND mRand(6,9);//FIXME:use right numbers
 
-	uint8_t rand[16];
-	mRand.getRandToA3A8((uint8_t *)rand);
-	LOG(INFO) << "RANDTesting = " << rand << "<--";
+uint8_t rand[16];
+mRand.getRandToA3A8((uint8_t *)rand);
+LOG(INFO) << "RANDTesting = " << rand << "<--";
 
-	uint64_t Kc;
-	uint8_t SRES[4];
-	comp128(gKiTable.getKi(), rand, SRES, (uint8_t *)&Kc);
-	mobileID.setKC(Kc);
-	LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
+uint64_t Kc;
+uint8_t SRES[4];
+comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
+mobileID.setKC(Kc);
+LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
 
     if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
     {/**	Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
@@ -572,7 +568,7 @@ if (gConfig.defines("Control.KiTable.SavePath")) {
 	LOG(INFO) << "CM Service Reject";
         return;
     }
-}
+
 
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {
