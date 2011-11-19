@@ -75,9 +75,6 @@ const char* gDateTime = __DATE__ " " __TIME__;
 // The TMSI Table.
 Control::TMSITable gTMSITable(gConfig.getStr("Control.Reporting.TMSITable").c_str());
 
-// The Ki table.
-//Control::KiTable gKiTable;
-
 // The transaction table.
 Control::TransactionTable gTransactionTable;
 
