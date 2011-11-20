@@ -542,7 +542,8 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		delete msg;
 	    }
 
-    /**Authentication Procedures, GSM 04.08 4.3.2.*/
+/**Authentication Procedures, GSM 04.08 4.3.2.*/
+if(!success) {// fallback if SIP auth above failed
     srand((unsigned)time(NULL));
     GSM::L3RAND Rand(rand(), rand());
     uint8_t rand[16];
@@ -604,7 +605,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	LOG(INFO) << "CM Service Reject";
         return;
     }
-
+}
 
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {
