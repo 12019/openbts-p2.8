@@ -113,9 +113,6 @@ AM_CONDITIONAL(UHD, [test "x$with_usrp1" != "xyes"])
 # Defines OSIP_CFLAGS, OSIP_INCLUDEDIR, and OSIP_LIBS
 PKG_CHECK_MODULES(OSIP, libosip2)
 
-# Check for A5 and COMP128 library
-PKG_CHECK_MODULES(LIBOSMOGSM, libosmogsm)
-
 # Defines ORTP_CFLAGS, ORTP_INCLUDEDIR, and ORTP_LIBS
 PKG_CHECK_MODULES(ORTP, ortp)
 

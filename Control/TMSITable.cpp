@@ -31,7 +31,7 @@
 #include <sqlite3util.h>
 
 #include <GSML3MMMessages.h>
-#include <GSML3MMElements.h>
+
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -56,10 +56,7 @@ static const char* createTMSITable = {
 		"PREV_MNC INTEGER, "			// previous network MNC
 		"PREV_LAC INTEGER, "			// previous network LAC
 		"DEG_LAT FLOAT, "				// RRLP result
-		"DEG_LONG FLOAT, "				// RRLP result
-		"KI TEXT, "			// Ki secret key
-//FIXME: would 2 integers and sqlite3_column_int64() would be better option?
-		"RAND TEXT"			// RAND random challenge
+		"DEG_LONG FLOAT "				// RRLP result
 	")"
 };
 
@@ -240,41 +237,7 @@ bool TMSITable::classmark(const char* IMSI, const GSM::L3MobileStationClassmark2
 	return sqlite3_command(mDB,query);
 }
 
-bool TMSITable::setKi(const char * IMSI, const char * Ki)
-{
-	char query[100];
-	sprintf(query,
-		"UPDATE TMSI_TABLE SET KI=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
-		Ki, (unsigned) time(NULL), IMSI);
-	return sqlite3_command(mDB, query);
-    
-}
 
-bool TMSITable::setRAND(const char * IMSI, const char * rand)
-{
-	char query[100];
-	sprintf(query,
-		"UPDATE TMSI_TABLE SET RAND=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
-		rand, (unsigned) time(NULL), IMSI);
-	return sqlite3_command(mDB, query);
-    
-}
-
-// Returned string must be free'd by the caller.
-char * TMSITable::getKi(const char * IMSI) const
-{
-	char * Ki = NULL;
-	sqlite3_single_lookup(mDB, "TMSI_TABLE", "IMSI", IMSI, "KI", Ki);
-	return Ki;
-}
-
-// Returned string must be free'd by the caller.
-char * TMSITable::getRAND(const char * IMSI) const
-{
-	char * RAND = NULL;
-	sqlite3_single_lookup(mDB, "TMSI_TABLE", "IMSI", IMSI, "RAND", RAND);
-	return RAND;
-}
 
 unsigned TMSITable::nextL3TI(const char* IMSI)
 {

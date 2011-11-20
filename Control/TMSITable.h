@@ -93,18 +93,6 @@ class TMSITable {
 	/** Set the classmark. */
 	bool classmark(const char* IMSI, const GSM::L3MobileStationClassmark2& classmark);
 
-	// Set secret key Ki value.
-	bool setKi(const char * IMSI, const char * Ki);
-
-	// Set the RAND challenge value.
-	bool setRAND(const char * IMSI, const char * rand);
-
-	// Get secret key Ki
-	char * getKi(const char * IMSI) const;
-	
-	// Get RAND challenge value
-	char * getRAND(const char * IMSI) const;
-
 	/** Get the next TI value to use for this IMSI or TMSI. */
 	unsigned nextL3TI(const char* IMSI);
 

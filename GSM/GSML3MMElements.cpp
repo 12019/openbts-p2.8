@@ -224,10 +224,12 @@ void L3TimeZoneAndTime::text(ostream& os) const
 	os << timeStr << " (local)";
 }
 
+
+
 void L3RAND::writeV(L3Frame& dest, size_t &wp) const
 {
-	dest.writeField(wp, mRUpper, 64);
-	dest.writeField(wp, mRLower, 64);
+	dest.writeField(wp,mRUpper,64);
+	dest.writeField(wp,mRLower,64);
 }
 
 void L3RAND::text(ostream& os) const
@@ -245,19 +247,5 @@ void L3SRES::text(ostream& os) const
 	os << hex << "0x" << mValue << dec;
 }
 
-// Note: correct buffer length of 16 bytes should be provided by caller
-bool L3RAND::getRandToA3A8(uint8_t * rand)
-{
-    memcpy(rand, reinterpret_cast<const uint8_t *> (mRLower), 8);
-    memcpy(rand+8, reinterpret_cast<const uint8_t *> (mRUpper), 8);
-    
-    return true;
-}
-
-bool L3SRES::checkSRES(uint8_t * sres)
-{
-    if(0 == memcmp(reinterpret_cast<const uint8_t *>(mValue), sres, 4)) return true;
-    return false;
-}
 
 // vim: ts=4 sw=4

@@ -14,7 +14,6 @@ AsteriskConfig	Asterisk configuration files for use with OpenBTS.
 CommonLib	Common-use libraries, mostly C++ wrappers for basic facilities.
 Control		Control-layer functions for the protocols of GSM 04.08 and SIP.
 GSM		The GSM stack.
-RRLP		Radio Resource Location Protocol
 SIP		Components of the SIP state machines ued by the control layer.
 SMS		The SMS stack.
 SR		The subscriber registry.
@@ -39,17 +38,13 @@ By default, OpenBTS assumes the following UDP port assignments:
 These can be controlled in the CONFIG table in /etc/OpenBTS.db.
 
 Standrd paths:
-/OpenBTS -- Binary installation and authorization keys.
+/OpenBTS -- Binary installation.
 /etc/OpenBTS -- Configuration databases.
 /var/run/OpenBTS -- Real-time reporting databases.
 
 The script apps/setUpFiles.sh will create these directories and install the
 correct files in them.
 
-
-Releases 2.5 and later include the smqueue SMS server.  It is NOT part of the
-normal GNU build process with the rest of OpenBTS.  To build smqueue, go
-into the smqueue directory and just type "make -f Makefile.standalone".
 
 
 

@@ -131,9 +131,6 @@ void DCCHDispatcher(GSM::LogicalChannel *DCCH);
 */
 unsigned  resolveIMSI(bool sameLAI, GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
-        
-unsigned char*  resolveKI( GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
-
 /**
 	Resolve a mobile ID to an IMSI.
 	@param mobID A mobile ID, that may be modified by the function.
@@ -141,10 +138,11 @@ unsigned char*  resolveKI( GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LC
 */
 void  resolveIMSI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
-/*
-  Resolve a mobile ID to a Ki.
- */
-unsigned char*  resolveKI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
+
+
+
+
+
 
 /**@name Control-layer exceptions. */
 //@{
@@ -221,6 +219,8 @@ class Q931TimerExpired : public ControlLayerException {
 /** A single global transaction table in the global namespace. */
 extern Control::TransactionTable gTransactionTable;
 //@}
+
+
 
 #endif
 

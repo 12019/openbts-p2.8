@@ -46,6 +46,10 @@ using namespace std;
 using namespace GSM;
 using namespace Control;
 
+
+
+
+
 // FIXME -- getMessage should return an L3Frame, not an L3Message.
 // This will mean moving all of the parsing into the control layer.
 // FIXME -- This needs an adjustable timeout.
@@ -126,19 +130,7 @@ unsigned  Control::resolveIMSI(bool sameLAI, L3MobileIdentity& mobileID, Logical
 	return 0;
 }
 
-/* Resolve a mobile ID to an IMSI and return KI if it is assigned. */
-unsigned char*  Control::resolveKI(L3MobileIdentity& mobID, LogicalChannel* LCH)
-{
-	// Returns known or assigned TMSI.
-	assert(LCH);
-	LOG(DEBUG) << "resolving mobile ID " << mobID ;
 
-	// IMSI already?  See if there's a TMSI already, too.
-	// This is a linear time operation, but should only happen on
-	// the first registration by this mobile.
-	if (mobID.type() == IMSIType) return (unsigned char *)gTMSITable.getKi(mobID.digits());
-	return NULL;
-}
 
 /* Resolve a mobile ID to an IMSI. */
 void  Control::resolveIMSI(L3MobileIdentity& mobileIdentity, LogicalChannel* LCH)

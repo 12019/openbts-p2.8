@@ -45,10 +45,7 @@
 #include <TMSITable.h>
 #include <RadioResource.h>
 #include <CallControl.h>
-extern "C" {
-#include <osmocom/gsm/comp128.h>
-#include <osmocom/gsm/a5.h>
-}
+
 #include <Globals.h>
 
 #include "CLI.h"
@@ -283,77 +280,6 @@ int tmsis(int argc, char** argv, ostream& os, istream& is)
 	os << "TMSI       IMSI            age  used" << endl;
 	gTMSITable.dump(os);
 	return SUCCESS;
-}
-
-int testA3(int argc, char** argv, ostream& os, istream& is)
-{
-  if (argc != 2) {
-    os << "usage: testA3 <imsiprefix>\n";
-    return BAD_VALUE;
-  }
-  
-  const char *imsi = argv[1];
-    
-    LOG(DEBUG) << "imsi = " << imsi;
-    LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-    uint8_t rnd[16];
-    GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
-    mRand.getRandToA3A8((uint8_t *)&rnd);
-    LOG(INFO) << "RANDTesting = " << rnd << "<--";
-
-    uint64_t Kc;
-    unsigned int SRES;
-    
-    comp128((uint8_t *)gTMSITable.getKi(imsi), rnd, (uint8_t *)&SRES, (uint8_t *)&Kc);
-    
-    LOG(DEBUG) << "Kc = " << Kc;
-    os << "kc=" << Kc << endl;
-    LOG(DEBUG) << "SRES = " << SRES;
-    os << "SRES=" << SRES << endl;
-
-    uint32_t frameno;
-    frameno = 123456;//FIXME: use normal test value
-    LOG(DEBUG) << "frameNumber = " << frameno;
-
-    ubit_t uplink[114], downlink[114];
-    osmo_a5_1((uint8_t *)&Kc, frameno, downlink, uplink);
-  return SUCCESS;
-}
-
-int findKi(int argc, char** argv, ostream& os, istream& is) 
-{
-    if (argc != 2) {
-	os << "usage: findki <imsi>\n";
-	return BAD_VALUE;
-    }
-
-    const char * imsi = argv[1];
-    LOG(DEBUG) << "Ki for IMSI " << imsi;
-    const char * ki = gTMSITable.getKi(imsi);
-    LOG(DEBUG) << "Ki = " << ki;
-    os << "ki=" << ki << endl;
-  
-    return SUCCESS;
-}
-
-int setKi(int argc, char** argv, ostream& os, istream& is) 
-{
-    if (argc != 3) {
-	os << "usage: setki <imsi> <ki>\n";
-	return BAD_VALUE;
-    }
-
-    const char * imsi = argv[1];
-    const char * ki = argv[2];
-    if(strnlen(ki, 16) != 16) {
-	os << "Ki must be 16 bytes long.\n";
-	return BAD_VALUE;
-    }
-    gTMSITable.setKi(imsi, ki);
-    LOG(DEBUG) << "Ki = " << ki << "set for IMSI = "<< imsi;
-    os << "ki=" << ki << "imsi=" << imsi << endl;
-  
-    return SUCCESS;
 }
 
 
@@ -815,9 +741,6 @@ Parser::Parser()
 	addCommand("help", showHelp, "[command] -- list available commands or gets help on a specific command.");
 	addCommand("exit", exit_function, "[wait] -- exit the application, either immediately, or waiting for existing calls to clear with a timeout in seconds");
 	addCommand("tmsis", tmsis, "[\"clear\"] or [\"dump\" filename] -- print/clear the TMSI table or dump it to a file.");
-	addCommand("findki", findKi, "[KIPrefix] -- prints all ki's that are prefixed by KIPrefix");
-	addCommand("setki", setKi, "[imsi] -- set Ki (secret key) value for given IMSI.");
-	addCommand("testA3", testA3, "-- testA3");
 	addCommand("sendsms", sendsms, "<IMSI> <src> -- send direct SMS to <IMSI>, addressed from <src>, after prompting.");
 	addCommand("sendsimple", sendsimple, "<IMSI> <src> -- send SMS to <IMSI> via SIP interface, addressed from <src>, after prompting.");
 	addCommand("sendrrlp", sendrrlp, "<IMSI> <hexstring> -- send RRLP message <hexstring> to <IMSI>.");

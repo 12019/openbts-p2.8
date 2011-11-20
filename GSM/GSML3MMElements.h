@@ -202,7 +202,6 @@ class L3RAND : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&) { assert(0); }
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
-	bool getRandToA3A8(uint8_t *);	
 };
 
 
@@ -228,8 +227,9 @@ class L3SRES : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&);
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
-	bool checkSRES(uint8_t *);
 };
+
+
 
 } // namespace GSM
 

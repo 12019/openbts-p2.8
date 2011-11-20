@@ -1,6 +1,6 @@
 /*
  * Radio device I/O interface
- * Written by Thomas Tsou <ttsou@vt.edu> (Not subject to CLA)
+ * Written by Thomas Tsou <ttsou@vt.edu>
  *
  * Copyright 2011 Free Software Foundation, Inc.
  *

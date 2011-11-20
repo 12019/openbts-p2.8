@@ -116,7 +116,6 @@ class L3MobileIdentity : public L3ProtocolElement {
 	MobileIDType mType;					///< IMSI, TMSI, or IMEI?
 	char mDigits[16];					///< GSM 03.03 2.2 limits the IMSI or IMEI to 15 digits.
 	uint32_t mTMSI;						///< GSM 03.03 2.4 specifies the TMSI as 32 bits
-	uint64_t mKC;						
 
 	public:
 
@@ -145,8 +144,6 @@ class L3MobileIdentity : public L3ProtocolElement {
 	unsigned int TMSI() const { assert(mType==TMSIType); return mTMSI; }
 	//@}
 
-	void setKC(uint64_t KC){mKC=KC;}
-	uint64_t getKC(){return mKC;}
 	/** Comparison. */
 	bool operator==(const L3MobileIdentity&) const;
 
