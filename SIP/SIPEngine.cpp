@@ -231,8 +231,21 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteDomain = string(origHost);
 }
 
+string randy401(osip_message_t *msg)
+{
+	if (msg->status_code != 401) return "";
+	osip_www_authenticate_t *auth = (osip_www_authenticate_t*)osip_list_get(&msg->www_authenticates, 0);
+	if (auth == NULL) return "";
+	char *rand = osip_www_authenticate_get_nonce(auth);
+	string rands = rand ? string(rand) : "";
+	if (rands.length()!=32) {
+		LOG(WARNING) << "SIP RAND wrong length: " << rands;
+		return "";
+	}
+	return rands;
+}
 
-bool SIPEngine::Register( Method wMethod )
+bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const char *SRES)
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
@@ -252,14 +265,16 @@ bool SIPEngine::Register( Method wMethod )
 			60*gConfig.getNum("SIP.RegistrationPeriod"),
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
-			mViaBranch.c_str(), mCallID.c_str(), mCSeq
+			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
+			RAND, IMSI, SRES
 		); 
 	} else if (wMethod == SIPUnregister ) {
 		reg = sip_register( mSIPUsername.c_str(), 
 			0,
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
-			mViaBranch.c_str(), mCallID.c_str(), mCSeq
+			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
+			NULL, NULL, NULL
 		);
 	} else { assert(0); }
  
@@ -276,6 +291,7 @@ bool SIPEngine::Register( Method wMethod )
 			msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.E"));
 		} catch (SIPTimeout) {
 			// send again
+			LOG(NOTICE) << "SIP REGISTER packet to " << mProxyIP << ":" << mProxyPort << " timeout; resending"; 
 			gSIPInterface.write(&mProxyAddr,reg);	
 			continue;
 		}
@@ -290,8 +306,18 @@ bool SIPEngine::Register( Method wMethod )
 			break;
 		}
 		if (status==401) {
+			string wRAND = randy401(msg);
+			// if rand is included on 401 unauthorized, then the challenge-response game is afoot
+			if (wRAND.length() != 0 && RAND != NULL) {
+				LOG(INFO) << "REGISTER challenge RAND=" << wRAND;
+				*RAND = wRAND;
+				osip_message_free(msg);
+				osip_message_free(reg);
+				return false;
+			} else {
 			LOG(INFO) << "REGISTER fail -- unauthorized";
 			break;
+		}
 		}
 		if (status==404) {
 			LOG(INFO) << "REGISTER fail -- not found";
