@@ -116,6 +116,11 @@ class SubscriberRegistry {
 
 	bool useGateway(const char* ISDN);
 
+	void stringToUint(string strRAND, uint64_t *hRAND, uint64_t *lRAND);
+
+	string uintToString(uint64_t h, uint64_t l);
+
+	string uintToString(uint32_t x);
 
 	private:
 

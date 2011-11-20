@@ -138,8 +138,15 @@ static const char* createSBTable = {
 		"musiconhold           VARCHAR(100), "
 		"restrictcid           CHAR(3), "
 		"calllimit             int(5), "
+		"WhiteListFlag         timestamp not null default '0', "
+		"WhiteListCode         varchar(8) not null default '0', "
+		"rand                  varchar(33) default '', "
+		"sres                  varchar(33) default '', "
+		"ki                    varchar(33) default '', "
+		"kc                    varchar(33) default '', "
 		"RRLPSupported         int(1) default 1 not null, "
-		"regTime               INTEGER default 0 NOT NULL" // Unix time of most recent registration
+		"regTime               INTEGER default 0 NOT NULL, " // Unix time of most recent registration
+		"a3_a8                 varchar(45) default NULL"
     ")"
 };
 
@@ -163,6 +170,12 @@ SubscriberRegistry::SubscriberRegistry()
     if (!sqlite3_command(mDB,createSBTable)) {
         LOG(EMERG) << "Cannot create SIP_BUDDIES table";
     }
+	if (!getCLIDLocal("IMSI001010000000000")) {
+		// This is a test SIM provided with the BTS.
+		if (addUser("IMSI001010000000000", "2100") != SUCCESS) {
+			LOG(EMERG) << "Cannot insert test SIM";
+		}
+	}
 }
 
 
@@ -361,7 +374,6 @@ char *SubscriberRegistry::mapCLIDGlobal(const char *local)
 }
 
 
-
 bool SubscriberRegistry::useGateway(const char* ISDN)
 {
 	// FIXME -- Do something more general in Asterisk.
@@ -370,7 +382,42 @@ bool SubscriberRegistry::useGateway(const char* ISDN)
 	return cmp!=0;
 }
 
+void SubscriberRegistry::stringToUint(string strRAND, uint64_t *hRAND, uint64_t *lRAND)
+{
+	assert(strRAND.size() == 32);
+	string strhRAND = strRAND.substr(0, 16);
+	string strlRAND = strRAND.substr(16, 16);
+	stringstream ssh;
+	ssh << hex << strhRAND;
+	ssh >> *hRAND;
+	stringstream ssl;
+	ssl << hex << strlRAND;
+	ssl >> *lRAND;
+}
 
+string SubscriberRegistry::uintToString(uint64_t h, uint64_t l)
+{
+	ostringstream os1;
+	os1.width(16);
+	os1.fill('0');
+	os1 << hex << h;
+	ostringstream os2;
+	os2.width(16);
+	os2.fill('0');
+	os2 << hex << l;
+	ostringstream os3;
+	os3 << os1.str() << os2.str();
+	return os3.str();
+}
+
+string SubscriberRegistry::uintToString(uint32_t x)
+{
+	ostringstream os;
+	os.width(8);
+	os.fill('0');
+	os << hex << x;
+	return os.str();
+}
 
 
 

@@ -420,14 +420,16 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// even if we don't actually assign it.
 	unsigned newTMSI = 0;
 	if (!preexistingTMSI) newTMSI = gTMSITable.assign(IMSI,lur);
+	string name = "IMSI" + string(IMSI);
 
 	// Try to register the IMSI.
 	// This will be set true if registration succeeded in the SIP world.
 	bool success = false;
+	string RAND;
 	try {
 		SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 		LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-		success = engine.Register(SIPEngine::SIPRegister); 
+		success = engine.Register(SIPEngine::SIPRegister, &RAND); 
 	}
 	catch(SIPTimeout) {
 		LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
@@ -439,6 +441,53 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		// Release the channel and return.
 		DCCH->send(L3ChannelRelease());
 		return;
+	}
+
+	// Did we get a RAND for challenge-response?
+	if (RAND.length() != 0) {
+		// Get the mobile's SRES.
+		LOG(INFO) << "sending " << RAND << " to mobile";
+		uint64_t uRAND;
+		uint64_t lRAND;
+		gSubscriberRegistry.stringToUint(RAND, &uRAND, &lRAND);
+		DCCH->send(L3AuthenticationRequest(0,L3RAND(uRAND,lRAND)));
+		L3Message* msg = getMessage(DCCH);
+		L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
+		if (!resp) {
+			if (msg) {
+				LOG(WARNING) << "Unexpected message " << *msg;
+				delete msg;
+			}
+			// FIXME -- We should differentiate between wrong message and no message at all.
+			throw UnexpectedMessage();
+		}
+		LOG(INFO) << *resp;
+		uint32_t mobileSRES = resp->SRES().value();
+		delete msg;
+		// verify SRES 
+		try {
+			SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
+			LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
+			ostringstream os;
+			os << hex << mobileSRES;
+			string SRESstr = os.str();
+			success = engine.Register(SIPEngine::SIPRegister, &RAND, IMSI, SRESstr.c_str()); 
+			if (!success) {
+				DCCH->send(L3AuthenticationReject());
+				DCCH->send(L3ChannelRelease());
+			}
+		}
+		catch(SIPTimeout) {
+			LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+			// Reject with a "network failure" cause code, 0x11.
+			DCCH->send(L3LocationUpdatingReject(0x11));
+			// HACK -- wait long enough for a response
+			// FIXME -- Why are we doing this?
+			sleep(4);
+			// Release the channel and return.
+			DCCH->send(L3ChannelRelease());
+			return;
+		}
 	}
 
 	if (gConfig.defines("Control.LUR.QueryRRLP")) {
@@ -495,9 +544,9 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 
     /**Authentication Procedures, GSM 04.08 4.3.2.*/
     srand((unsigned)time(NULL));
-    GSM::L3RAND RAND(rand(), rand());
+    GSM::L3RAND Rand(rand(), rand());
     uint8_t rand[16];
-    RAND.getRandToA3A8((uint8_t *)rand);
+    Rand.getRandToA3A8((uint8_t *)rand);
     const char* imsi;
     imsi = mobileID.digits();
     LOG(INFO) << "IMSI=" << imsi;
@@ -506,7 +555,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
     gTMSITable.setRAND(imsi, (char *)rand);
     LOG(DEBUG) << "RAND " << rand << " set for IMSI " << imsi;
 //FIXME: use proper sequence number     
-    DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), RAND));
+    DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), Rand));
 
     LOG(INFO) << "Authentication Request Sent";
 

@@ -1,3 +1,4 @@
+/**@file SIP Call Control -- SIP IETF RFC-3261, RTP IETF RFC-3550. */
 /*
 * Copyright 2008 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
@@ -161,7 +162,7 @@ public:
 		Can throw SIPTimeout().
 		@return True on success.
 	*/
-	bool Register(Method wMethod=SIPRegister);	
+	bool Register(Method wMethod=SIPRegister, string *RAND = NULL, const char *IMSI = NULL, const char *SRES = NULL);	
 
 	/**
 		Send sip unregister and look at return msg.
