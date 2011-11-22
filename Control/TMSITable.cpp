@@ -112,7 +112,7 @@ unsigned TMSITable::assign(const char* IMSI, const GSM::L3LocationUpdatingReques
 	char query[1000];
 	unsigned now = (unsigned)time(NULL);
 	if (!lur) {
-		sprintf(query,
+		snprintf(query, 1000,
 				"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED) "
 				"VALUES ('%s',%u,%u)",
 				IMSI,now,now);
@@ -120,12 +120,12 @@ unsigned TMSITable::assign(const char* IMSI, const GSM::L3LocationUpdatingReques
 		const GSM::L3LocationAreaIdentity &lai = lur->LAI();
 		const GSM::L3MobileIdentity &mid = lur->mobileID();
 		if (mid.type()==GSM::TMSIType) {
-			sprintf(query,
+			snprintf(query, 1000,
 					"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED,PREV_MCC,PREV_MNC,PREV_LAC,OLD_TMSI) "
 					"VALUES ('%s',%u,%u,%u,%u,%u,%u)",
 					IMSI,now,now,lai.MCC(),lai.MNC(),lai.LAC(),mid.TMSI());
 		} else {
-			sprintf(query,
+			snprintf(query, 1000,
 					"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED,PREV_MCC,PREV_MNC,PREV_LAC) "
 					"VALUES ('%s',%u,%u,%u,%u,%u)",
 					IMSI,now,now,lai.MCC(),lai.MNC(),lai.LAC());
@@ -148,7 +148,7 @@ void TMSITable::touch(unsigned TMSI) const
 {
 	// Update timestamp.
 	char query[100];
-	sprintf(query,"UPDATE TMSI_TABLE SET ACCESSED = %u WHERE TMSI == %u",
+	snprintf(query, 100, "UPDATE TMSI_TABLE SET ACCESSED = %u WHERE TMSI == %u",
 		(unsigned)time(NULL),TMSI);
 	sqlite3_command(mDB,query);
 }
@@ -223,8 +223,8 @@ void TMSITable::clear()
 
 bool TMSITable::IMEI(const char* IMSI, const char *IMEI)
 {
-	char query[100];
-	sprintf(query,"UPDATE TMSI_TABLE SET IMEI=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
+	char query[1024];
+	snprintf(query, 1024, "UPDATE TMSI_TABLE SET IMEI=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
 		IMEI,(unsigned)time(NULL),IMSI);
 	return sqlite3_command(mDB,query);
 }
@@ -234,8 +234,8 @@ bool TMSITable::IMEI(const char* IMSI, const char *IMEI)
 bool TMSITable::classmark(const char* IMSI, const GSM::L3MobileStationClassmark2& classmark)
 {
 	int A5Bits = (classmark.A5_1()<<2) + (classmark.A5_2()<<1) + classmark.A5_3();
-	char query[100];
-	sprintf(query,
+	char query[1024];
+	snprintf(query, 1024,
 		"UPDATE TMSI_TABLE SET A5_SUPPORT=%u,ACCESSED=%u,POWER_CLASS=%u "
 		" WHERE IMSI=\"%s\"",
 		A5Bits,(unsigned)time(NULL),classmark.powerClass(),IMSI);
@@ -244,8 +244,8 @@ bool TMSITable::classmark(const char* IMSI, const GSM::L3MobileStationClassmark2
 
 bool TMSITable::setKi(const char * IMSI, const char * Ki)
 {
-	char query[100];
-	sprintf(query,
+	char query[1024];
+	snprintf(query, 1024,
 		"UPDATE TMSI_TABLE SET KI=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
 		Ki, (unsigned) time(NULL), IMSI);
 	return sqlite3_command(mDB, query);
@@ -254,8 +254,8 @@ bool TMSITable::setKi(const char * IMSI, const char * Ki)
 
 bool TMSITable::setRAND(const char * IMSI, const char * rand)
 {
-	char query[100];
-	sprintf(query,
+	char query[1024];
+	snprintf(query, 1024,
 		"UPDATE TMSI_TABLE SET RAND=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
 		rand, (unsigned) time(NULL), IMSI);
 	return sqlite3_command(mDB, query);
@@ -289,7 +289,7 @@ unsigned TMSITable::nextL3TI(const char* IMSI)
 	// Note that TI=7 is a reserved value, so value values are 0-6.  See GSM 04.07 11.2.3.1.3.
 	unsigned next = (l3ti+1) % 7;
 	char query[200];
-	sprintf(query,"UPDATE TMSI_TABLE SET L3TI=%u,ACCESSED=%u WHERE IMSI='%s'",
+	snprintf(query, 200, "UPDATE TMSI_TABLE SET L3TI=%u,ACCESSED=%u WHERE IMSI='%s'",
 		next, (unsigned)time(NULL),IMSI);
 	if (!sqlite3_command(mDB,query)) {
 		LOG(ALERT) << "cannot write L3TI to TMSI_TABLE";
