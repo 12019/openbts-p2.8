@@ -706,8 +706,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	imsi = mobileID.digits();
 	LOG(INFO) << "imsi = " << imsi;
 	LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-	uint8_t rand[16];
-	RAND.getRandToA3A8((uint8_t *)&rand);
+	uint8_t * rand = (uint8_t *)RAND.getRandToA3A8();
 	LOG(INFO) << "RANDTesting = " << rand << "<--";
 	gTMSITable.setRAND(imsi, (char *)rand);
 //FIXME: use proper sequence number
@@ -1043,8 +1042,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	imsi = mobID.digits();
 	LOG(INFO) << "imsi = " << imsi;
 	LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-	uint8_t rand[16];
-	RAND.getRandToA3A8((uint8_t *)rand);
+	uint8_t * rand = (uint8_t *)RAND.getRandToA3A8();
 	LOG(INFO) << "RANDTesting = " << rand << "<--";
 //FIXME: use proper sequence number
 	LCH->send(GSM::L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), RAND));

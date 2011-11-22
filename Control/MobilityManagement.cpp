@@ -562,8 +562,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 if(!success) {// fallback if SIP auth above failed
     srand((unsigned)time(NULL));
     GSM::L3RAND Rand(rand(), rand());
-    uint8_t rand[16];
-    Rand.getRandToA3A8((uint8_t *)rand);
+    uint8_t * rand = (uint8_t *)Rand.getRandToA3A8();
     const char* imsi;
     imsi = mobileID.digits();
     LOG(INFO) << "IMSI=" << imsi;

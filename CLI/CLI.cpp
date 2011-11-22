@@ -296,9 +296,9 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
     
     LOG(DEBUG) << "imsi = " << imsi << endl;
     LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
-    uint8_t rnd[16];
+    uint8_t * rnd;
     GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
-    mRand.getRandToA3A8((uint8_t *)&rnd);
+    rnd = (uint8_t *)mRand.getRandToA3A8();
     LOG(INFO) << "RANDTesting = " << rnd << "<--";
 
     uint64_t Kc;
