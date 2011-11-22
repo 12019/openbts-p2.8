@@ -294,7 +294,7 @@ int testA3(int argc, char** argv, ostream& os, istream& is)
   
   const char *imsi = argv[1];
     
-    LOG(DEBUG) << "imsi = " << imsi;
+    LOG(DEBUG) << "imsi = " << imsi << endl;
     LOG(INFO) << "Ki = " << gTMSITable.getKi(imsi);
     uint8_t rnd[16];
     GSM::L3RAND mRand(6, 9);//FIXME: random junk numbers
@@ -328,9 +328,9 @@ int findKi(int argc, char** argv, ostream& os, istream& is)
     }
 
     const char * imsi = argv[1];
-    LOG(DEBUG) << "Ki for IMSI " << imsi;
+    LOG(DEBUG) << "Ki for IMSI " << imsi << endl;
     const char * ki = gTMSITable.getKi(imsi);
-    LOG(DEBUG) << "Ki = " << ki;
+    LOG(DEBUG) << "Ki = " << ki << endl;
     os << "ki=" << ki << endl;
   
     return SUCCESS;
@@ -350,8 +350,8 @@ int setKi(int argc, char** argv, ostream& os, istream& is)
 	return BAD_VALUE;
     }
     gTMSITable.setKi(imsi, ki);
-    LOG(DEBUG) << "Ki = " << ki << "set for IMSI = "<< imsi;
-    os << "ki=" << ki << "imsi=" << imsi << endl;
+    LOG(DEBUG) << "Ki = " << ki << " set for IMSI = "<< imsi << endl;
+    os << "ki=" << ki << endl << "imsi=" << imsi << endl;
   
     return SUCCESS;
 }
