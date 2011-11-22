@@ -245,13 +245,10 @@ void L3SRES::text(ostream& os) const
 	os << hex << "0x" << mValue << dec;
 }
 
-// Note: correct buffer length of 16 bytes should be provided by caller
-bool L3RAND::getRandToA3A8(uint8_t * rand)
+const char * L3RAND::getRandToA3A8()
 {
-    memcpy(rand, reinterpret_cast<const uint8_t *> (mRLower), 8);
-    memcpy(rand+8, reinterpret_cast<const uint8_t *> (mRUpper), 8);
-    
-    return true;
+    SubscriberRegistry sr;
+    return sr.uintToString(mRUpper, mRLower).c_str();
 }
 
 bool L3SRES::checkSRES(uint8_t * sres)
