@@ -27,7 +27,7 @@ AM_CXXFLAGS = -Wall -ldl -pthread
 noinst_PROGRAMS = \
 	OpenBTS
 
-OpenBTS_SOURCES = OpenBTS.cpp
+OpenBTS_SOURCES = OpenBTS.cpp cmdline.c
 OpenBTS_LDADD = \
 	$(CLI_LA) \
 	$(SIP_LA) \

@@ -54,7 +54,7 @@ private:
 	sqlite3 *mDB;		///< database connection
 
 public:
-
+	PhysicalStatus() {};
 	/**
 		Create a physical status reporting table.
 		@param path Path fto sqlite3 database file.

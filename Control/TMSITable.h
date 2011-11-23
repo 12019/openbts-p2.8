@@ -53,6 +53,8 @@ class TMSITable {
 
 	public:
 
+	TMSITable() {};
+
 	TMSITable(const char*wPath);
 
 	~TMSITable();

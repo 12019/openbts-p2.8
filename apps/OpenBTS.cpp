@@ -28,8 +28,8 @@
 #include <fstream>
 
 #include <Configuration.h>
-// Load configuration from a file.
-ConfigurationTable gConfig("/etc/OpenBTS/OpenBTS.db");
+// configuration placeholder
+ConfigurationTable gConfig;
 
 #include <TRXManager.h>
 #include <GSML1FEC.h>
@@ -50,7 +50,7 @@ ConfigurationTable gConfig("/etc/OpenBTS/OpenBTS.db");
 #include <Configuration.h>
 #include <PhysicalStatus.h>
 #include <SubscriberRegistry.h>
-
+#include "cmdline.h"
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
@@ -73,13 +73,13 @@ const char* gDateTime = __DATE__ " " __TIME__;
 // be declared here.
 
 // The TMSI Table.
-Control::TMSITable gTMSITable(gConfig.getStr("Control.Reporting.TMSITable").c_str());
+Control::TMSITable gTMSITable;
 
 // The transaction table.
 Control::TransactionTable gTransactionTable;
 
 // Physical status reporting
-GSM::PhysicalStatus gPhysStatus(gConfig.getStr("Control.Reporting.PhysStatusTable").c_str());
+GSM::PhysicalStatus gPhysStatus;
 
 // The global SIPInterface object.
 SIP::SIPInterface gSIPInterface;
@@ -136,9 +136,26 @@ int main(int argc, char *argv[])
 
 	srandom(time(NULL));
 
+	gengetopt_args_info args_info;
+
 	gConfig.setUpdateHook(purgeConfig);
 	gLogInit("openbts",gConfig.getStr("Log.Level").c_str(),LOG_LOCAL7);
 	LOG(ALERT) << "OpenBTS starting, ver " << VERSION << " build date " << __DATE__;
+
+	if(cmdline_parser(argc, argv, &args_info) != 0) 
+	{
+	    LOG(INFO) << "OpenBTS command-line options parsing failed.";
+	    return 1;
+	}
+	if(args_info.config_db_given) gConfig = ConfigurationTable(args_info.config_db_arg);
+
+	if(args_info.phys_tab_given) gPhysStatus = GSM::PhysicalStatus(args_info.phys_tab_arg);
+	else gPhysStatus = GSM::PhysicalStatus(gConfig.getStr("Control.Reporting.PhysStatusTable").c_str());
+
+	if(args_info.tmsi_tab_given) gTMSITable = Control::TMSITable(args_info.tmsi_tab_arg);
+	else gTMSITable = Control::TMSITable(gConfig.getStr("Control.Reporting.TMSITable").c_str());
+
+	if(args_info.sip_local_port_given) gConfig.set("SIP.Local.Port", args_info.sip_local_port_arg);
 
 	COUT("\n\n" << gOpenBTSWelcome << "\n");
 	COUT("\nStarting the system...");

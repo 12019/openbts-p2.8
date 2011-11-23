@@ -1,0 +1,11 @@
+# run `gengetopt -i openbts.ggo` to regenerate cmdline.*
+# some useful command-line switches
+option	"config-db"		c	"Location of main configuration database"
+    string	typestr="filename"	default="/etc/OpenBTS/OpenBTS.db"		optional
+option	"phys-tab"		s	"Location of channel status reporting database"
+    string	typestr="filename"	default="/var/run/OpenBTSChannelTable.db"	optional
+option	"tmsi-tab"		t	"Location of TMSI table database"
+    string	typestr="filename"	default="/var/run/OpenBTSTMSITable.db"		optional
+option	"sip-local-port"	p	"Local port for SIP"
+    int		typestr="portnumber"	default="5062"					optional
+
