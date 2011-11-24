@@ -330,8 +330,13 @@ int findKi(int argc, char** argv, ostream& os, istream& is)
     const char * imsi = argv[1];
     LOG(DEBUG) << "Ki for IMSI " << imsi << endl;
     const char * ki = gTMSITable.getKi(imsi);
-    LOG(DEBUG) << "Ki = " << ki << endl;
-    os << "ki=" << ki << endl;
+    if(ki) {
+	LOG(DEBUG) << "Ki = " << ki << endl;
+	os << "ki=" << ki << endl;
+    } else {
+	LOG(DEBUG) << "Ki not found." << endl;
+	os << "Ki not found." << endl;
+    }
   
     return SUCCESS;
 }
