@@ -354,13 +354,17 @@ int setKi(int argc, char** argv, ostream& os, istream& is)
 	os << "Ki must be 16 bytes long.\n";
 	return BAD_VALUE;
     }
-    gTMSITable.setKi(imsi, ki);
-    LOG(DEBUG) << "Ki = " << ki << " set for IMSI = "<< imsi << endl;
-    os << "ki=" << ki << endl << "imsi=" << imsi << endl;
+    
+    if(gTMSITable.setKi(imsi, ki)) {
+	LOG(DEBUG) << "Ki = " << ki << " set for IMSI = "<< imsi << endl;
+	os << "ki=" << ki << endl << "imsi=" << imsi << endl;
+    } else {
+	LOG(ERR) << "failed to set Ki "<< ki << " for IMSI " << imsi << endl;
+	os << "failed to set Ki "<< ki << " for IMSI " << imsi << endl;
+    }
   
     return SUCCESS;
 }
-
 
 /** Submit an SMS for delivery to an IMSI. */
 int sendsimple(int argc, char** argv, ostream& os, istream& is)
