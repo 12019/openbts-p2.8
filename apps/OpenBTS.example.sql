@@ -99,6 +99,7 @@ INSERT INTO "CONFIG" VALUES('SIP.Local.IP','127.0.0.1',1,0,'IP address of the Op
 INSERT INTO "CONFIG" VALUES('SIP.Local.Port','5062',1,0,'IP port that OpenBTS uses for its SIP interface.  Static.');
 INSERT INTO "CONFIG" VALUES('SIP.MaxForwards','5',0,0,'Maximum allowed number of referrals.');
 INSERT INTO "CONFIG" VALUES('SIP.Proxy.Registration','127.0.0.1:5064',0,0,'The IP host and port of the proxy to be used for registration and authentication.  This should normally be the subscriber registry SIP interface, not Asterisk.');
+INSERT INTO "CONFIG" VALUES('SIP.Proxy.Registration.Fallback',1,0,0,'Fallback flag. Set to 1 to use local fallback in case of SIP registration failure, 0 otherwise.');
 INSERT INTO "CONFIG" VALUES('SIP.Proxy.SMS','127.0.0.1:5063',0,0,'The IP host and port of the proxy to be used for text messaging.  This is smqueue, for example.');
 INSERT INTO "CONFIG" VALUES('SIP.Proxy.Speech','127.0.0.1:5060',0,0,'The IP host and port of the proxy to be used for normal speech calls.  This is Asterisk, for example.');
 INSERT INTO "CONFIG" VALUES('SIP.RegistrationPeriod','90',0,0,'Registration period in minutes for MS SIP users.  Should be longer than GSM T3212.');
