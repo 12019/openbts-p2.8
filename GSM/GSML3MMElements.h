@@ -193,6 +193,8 @@ class L3RAND : public L3ProtocolElement {
 
 	public:
 
+	L3RAND() {}
+	
 	L3RAND(uint64_t wRUpper, uint64_t wRLower):
 		mRUpper(wRUpper),mRLower(wRLower)
 	{ }
@@ -202,7 +204,8 @@ class L3RAND : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&) { assert(0); }
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
-	const char * getRandToA3A8();	
+	string getRAND(size_t length);
+	const char * getRandToA3A8();
 };
 
 

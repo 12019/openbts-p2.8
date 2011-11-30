@@ -32,7 +32,9 @@
 #include <time.h>
 #include "GSML3MMElements.h"
 #include <Logger.h>
-
+#include <algorithm>
+#include <cstdlib>
+#include <string>
 
 using namespace std;
 using namespace GSM;
@@ -243,6 +245,19 @@ void L3SRES::parseV(const L3Frame& src, size_t &rp)
 void L3SRES::text(ostream& os) const
 {
 	os << hex << "0x" << mValue << dec;
+}
+
+inline char rnd() {
+    const char * range = "abcdef0123456789";
+    return range[rand() % sizeof(range)];
+}
+
+string L3RAND::getRAND(size_t length)
+{
+    string random;
+    random.reserve(length);
+    generate_n(std::back_inserter(random), length, rnd);
+    return random;
 }
 
 const char * L3RAND::getRandToA3A8()

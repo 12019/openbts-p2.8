@@ -356,6 +356,7 @@ bool RRLPServer::transact()
 					LOG(INFO) << "MS says: message not implemented";
 					// flag unsupported in SR so we don't waste time on it again
 					os2 << "update sip_buddies set RRLPSupported = \"0\" where name = \"" << name << "\"";
+					LOG(INFO) << os2.str();
 					if (!sqlite3_command(gSubscriberRegistry.db(), os2.str().c_str())) {
 						LOG(INFO) << "sqlite3_command problem";
 					}
@@ -433,18 +434,28 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	}
 	catch(SIPTimeout) {
 		LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
-		// Reject with a "network failure" cause code, 0x11.
-		DCCH->send(L3LocationUpdatingReject(0x11));
-		// HACK -- wait long enough for a response
-		// FIXME -- Why are we doing this?
-		sleep(4);
-		// Release the channel and return.
-		DCCH->send(L3ChannelRelease());
-		return;
+		if(gConfig.defines("SIP.Proxy.Registration.Fallback"))
+		{// Fallback procedure to obtain RAND
+		    RAND = GSM::L3RAND().getRAND(16);
+		    LOG(INFO) << "Fallback RAND procedure initiated." << endl;
+		}
+		else
+		{// Reject with a "network failure" cause code, 0x11.
+		    DCCH->send(L3LocationUpdatingReject(0x11));
+		    // HACK -- wait long enough for a response
+		    // FIXME -- Why are we doing this?
+		    sleep(4);
+		    // Release the channel and return.
+		    DCCH->send(L3ChannelRelease());
+		    return;
+		}
 	}
 
 	// Did we get a RAND for challenge-response?
 	if (RAND.length() != 0) {
+		// Cache RAND value
+		gTMSITable.setRAND(IMSI, RAND.c_str());
+		LOG(DEBUG) << "RAND " << RAND.c_str() << " set for IMSI " << IMSI;
 		// Get the mobile's SRES.
 		LOG(INFO) << "sending " << RAND << " to mobile";
 		uint64_t uRAND;
@@ -465,12 +476,12 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		uint32_t mobileSRES = resp->SRES().value();
 		delete msg;
 		// verify SRES 
+		ostringstream os;
+		os << hex << mobileSRES;
+		string SRESstr = os.str();
 		try {
 			SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 			LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-			ostringstream os;
-			os << hex << mobileSRES;
-			string SRESstr = os.str();
 			success = engine.Register(SIPEngine::SIPRegister, &RAND, IMSI, SRESstr.c_str()); 
 			if (!success) {
 				DCCH->send(L3AuthenticationReject());
@@ -478,8 +489,9 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 			}
 		}
 		catch(SIPTimeout) {
-			LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
-			// Reject with a "network failure" cause code, 0x11.
+		    LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+		    if(!gConfig.defines("SIP.Proxy.Registration.Fallback"))
+		    {// Reject with a "network failure" cause code, 0x11.
 			DCCH->send(L3LocationUpdatingReject(0x11));
 			// HACK -- wait long enough for a response
 			// FIXME -- Why are we doing this?
@@ -487,6 +499,38 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 			// Release the channel and return.
 			DCCH->send(L3ChannelRelease());
 			return;
+		    } 
+		    else 
+		    {// Fallback to local SRES check
+			uint64_t Kc;
+			uint8_t SRES[4];
+			comp128((uint8_t *)gTMSITable.getKi(IMSI), (uint8_t *)RAND.c_str(), SRES, (uint8_t *)&Kc);
+			mobileID.setKC(Kc);
+			int chk = SRESstr.compare(0, 4, (char *) SRES, 4);
+			LOG(INFO) << "mobile's SRES=0x" << hex << mobileSRES << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
+			if(0 != chk) {
+				LOG(INFO) << "Local SRES authentication failed." << endl;
+				DCCH->send(L3AuthenticationReject());
+				DCCH->send(L3ChannelRelease());
+			}
+			else {
+				LOG(INFO) << "Local SRES authentication OK." << endl;
+				success = true;
+			}
+		    }
+		}
+		if(success) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
+		    LOG(INFO) << "Ciphering Command Will Send";
+	            DCCH->send(GSM::L3CipheringModeCommand());
+		    LOG(INFO) << "Ciphering Command Sent";
+
+		    L3Frame* resp = DCCH->recv();
+		    LOG(INFO) << "Received";
+		    if(!resp) { LOG(NOTICE) << "Ciphering Error"; } 
+		    else { LOG(INFO) << *resp <<"Responce"; }
+		    delete resp;
+
+		    LOG(INFO) << "Ciphering Completed";
 		}
 	}
 
@@ -542,70 +586,6 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		delete msg;
 	    }
 
-/**Authentication Procedures, GSM 04.08 4.3.2.*/
-if(!success) {// fallback if SIP auth above failed
-    srand((unsigned)time(NULL));
-    GSM::L3RAND Rand(rand(), rand());
-    uint8_t * rand = (uint8_t *)Rand.getRandToA3A8();
-    const char* imsi;
-    imsi = mobileID.digits();
-    LOG(INFO) << "IMSI=" << imsi;
-    LOG(INFO) << "RANDTesting = " << rand << "<--";
-
-    gTMSITable.setRAND(imsi, (char *)rand);
-    LOG(DEBUG) << "RAND " << rand << " set for IMSI " << imsi;
-//FIXME: use proper sequence number     
-    DCCH->send(L3AuthenticationRequest(GSM::L3CipheringKeySequenceNumber(0), Rand));
-
-    LOG(INFO) << "Authentication Request Sent";
-
-    L3Message* msg = getMessage(DCCH);
-    LOG(INFO) << *msg << "Authentication Response";
-
-    L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
-    if (!resp) {
-	if (msg) {
-	    LOG(WARNING) << "Unexpected message " << *msg;
-	    delete msg;
-	}
-	throw UnexpectedMessage();
-    }
-    LOG(INFO) << *resp<< "Response Recieved";
-
-    uint64_t Kc;
-    uint8_t SRES[4];
-    comp128((uint8_t *)gTMSITable.getKi(imsi), rand, SRES, (uint8_t *)&Kc);
-    mobileID.setKC(Kc);
-    LOG(INFO) << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
-
-    if(resp->checkSRES(SRES)) // Comparison between SRES and Resp
-    {/**	Ciphering Mode Procedures, GSM 04.08 3.4.7.*/
-	LOG(INFO) << "Ciphering Command Will Send";
-        DCCH->send(GSM::L3CipheringModeCommand());
-	LOG(INFO) << "Ciphering Command Sent";
-
-	L3Frame* resp = DCCH->recv();
-	LOG(INFO) << "Received";
-	if (!resp) { LOG(NOTICE) << "Ciphering Error"; } 
-	else { LOG(INFO) << *resp <<"Responce"; }
-	delete resp;
-
-    LOG(INFO) << "Ciphering Completed";
-    }
-    else
-    { // If the IMSI has been used, TMSI Case has been neglected as it is never Used.
-
-        DCCH->send(L3AuthenticationReject());
-    	LOG(INFO) <<  "Authentication Reject";
-        // Release the channel and return.
-        DCCH->send(L3ChannelRelease());
-	LOG(INFO) << "Channel Release";
-        DCCH->send(L3CMServiceReject(0x06));
-	LOG(INFO) << "CM Service Reject";
-        return;
-    }
-}
-
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {
 		LOG(INFO) << "registration FAILED: " << mobileID;
@@ -660,6 +640,8 @@ if(!success) {// fallback if SIP auth above failed
 			sendWelcomeMessage( "Control.LUR.OpenRegistration.Message",
 				"Control.LUR.OpenRegistration.ShortCode", IMSI, DCCH);
 		}
+		// set unix time of most recent registration
+		gSubscriberRegistry.setRegTime(name.c_str());
 	}
 
 	// Release the channel and return.
