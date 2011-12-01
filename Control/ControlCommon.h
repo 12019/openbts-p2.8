@@ -141,6 +141,14 @@ unsigned char*  resolveKI( GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LC
 */
 void  resolveIMSI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
+
+// Try to authenticate mobID using given channel
+// Return 0 on success, error code otherwise: 
+// 1 - SIP timeout and no fallback configured
+// 2 - SIP authentication rejected
+// 3 - error inside authentication routine
+unsigned attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* LCH);
+
 /*
   Resolve a mobile ID to a Ki.
  */
