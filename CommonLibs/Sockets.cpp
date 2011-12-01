@@ -237,7 +237,9 @@ void UDPSocket::open(unsigned short localPort)
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(localPort);
 	if (bind(mSocketFD,(struct sockaddr*)&address,length)<0) {
-		perror("bind() failed");
+		char err[666];
+		snprintf(err, 665, "failed to bind to port %d ", localPort);
+		perror(err);
 		throw SocketError();
 	}
 }
@@ -283,7 +285,9 @@ void UDDSocket::open(const char* localPath)
 	strcpy(address.sun_path,localPath);
 	unlink(localPath);
 	if (bind(mSocketFD,(struct sockaddr*)&address,length)<0) {
-		perror("bind() failed");
+		char err[666];
+		snprintf(err, 665, "failed to bind to %s ", localPath);
+		perror(err);
 		throw SocketError();
 	}
 }
