@@ -55,10 +55,8 @@ using namespace SIP;
 #include <Logger.h>
 #undef WARNING
 
-
 using namespace GSM;
 using namespace Control;
-
 
 /** Controller for CM Service requests, dispatches out to multiple possible transaction controllers. */
 void Control::CMServiceResponder(const L3CMServiceRequest* cmsrq, LogicalChannel* DCCH)
