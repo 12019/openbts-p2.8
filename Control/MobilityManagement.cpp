@@ -31,9 +31,7 @@
 #include "MobilityManagement.h"
 #include "SMSControl.h"
 #include "CallControl.h"
-extern "C" {
-#include <osmocom/gsm/comp128.h>
-}
+
 #include <GSMLogicalChannel.h>
 #include <GSML3RRMessages.h>
 #include <GSML3MMMessages.h>
@@ -54,10 +52,8 @@ using namespace SIP;
 #include <Logger.h>
 #undef WARNING
 
-
 using namespace GSM;
 using namespace Control;
-
 
 /** Controller for CM Service requests, dispatches out to multiple possible transaction controllers. */
 void Control::CMServiceResponder(const L3CMServiceRequest* cmsrq, LogicalChannel* DCCH)

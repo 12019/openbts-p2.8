@@ -34,7 +34,6 @@
 	MOD -- Mobile Originated Disconnect (mobile hangs up)
 */
 
-
 #include <Globals.h>
 
 #include "ControlCommon.h"
@@ -56,18 +55,10 @@
 #include <SIPEngine.h>
 
 #include <Logger.h>
-extern "C" {
-#include <osmocom/gsm/comp128.h>
-}
 #undef WARNING
 
 using namespace std;
 using namespace Control;
-
-
-
-
-
 
 /**
 	Return an even UDP port number for the RTP even/odd pair.
@@ -656,7 +647,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 
 	// Try to athenticate caller
 	unsigned auth_result = attemptAuth(mobileID, LCH);
-
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	if (!veryEarly) {
@@ -920,7 +911,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 
 	// Try to athenticate callee
 	unsigned auth_result = attemptAuth(mobID, LCH);
-
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// GSM 04.08 5.2.2.1
 	LOG(INFO) << "sending GSM Setup to call " << transaction->calling();
 	LCH->send(GSM::L3Setup(L3TI,GSM::L3CallingPartyBCDNumber(transaction->calling())));
