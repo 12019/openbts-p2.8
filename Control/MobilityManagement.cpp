@@ -424,7 +424,10 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 
 	// Try to register the IMSI.
 	// This will be set true if registration succeeded.
-	bool success = !(bool)attemptAuth(mobileID, DCCH);
+	LOG(INFO) << "Trying to authenticate " << name << "..." << endl;
+	unsigned auth_result = attemptAuth(mobileID, DCCH);
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
+	bool success = !(bool)auth_result;
 
 	if (gConfig.defines("Control.LUR.QueryRRLP")) {
 		// Query for RRLP

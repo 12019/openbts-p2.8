@@ -690,7 +690,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// For now, we are assuming that the phone won't make a call if it didn't
 	// get registered.
 
-	// Try to athenticate caller
+	LOG(INFO) << "Trying to athenticate caller..." << endl;
 	unsigned auth_result = attemptAuth(mobileID, LCH);
 	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// Allocate a TCH for the call, if we don't have it already.
@@ -971,7 +971,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	unsigned L3TI = transaction->L3TI();
 	assert(L3TI<7);
 
-	// Try to athenticate callee
+	LOG(INFO) << "Trying to athenticate callee..." << endl;
 	unsigned auth_result = attemptAuth(mobID, LCH);
 	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// GSM 04.08 5.2.2.1
