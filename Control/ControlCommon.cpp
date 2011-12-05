@@ -108,6 +108,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 // This will be set true if registration succeeded in the SIP world.
     bool success = false;
     string RAND;
+    LOG(INFO) << "Authenticating " << name << "..." << endl;
     try {
 	SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
@@ -122,6 +123,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	}
 	else
 	{// Reject with a "network failure" cause code, 0x11.
+	    LOG(INFO) << "SIP failure and no fallback: rejecting with a network failure cause code" << endl; 
 	    LCH->send(L3LocationUpdatingReject(0x11));
 	    // HACK -- wait long enough for a response
 	    // FIXME -- Why are we doing this?
@@ -174,6 +176,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
 	    if(!gConfig.defines("SIP.Proxy.Registration.Fallback"))
 	    {// Reject with a "network failure" cause code, 0x11.
+		LOG(INFO) << "SIP failure and no fallback: rejecting with a network failure cause code" << endl;
 		LCH->send(L3LocationUpdatingReject(0x11));
 		// HACK -- wait long enough for a response
 		// FIXME -- Why are we doing this?
