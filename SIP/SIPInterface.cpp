@@ -74,10 +74,10 @@ osip_message_t * SIPMessageMap::read(const std::string& call_id, unsigned readTi
 	LOG(DEBUG) << "call_id=" << call_id;
 	OSIPMessageFIFO * fifo = mMap.readNoBlock(call_id);
 	if (!fifo) {
-		LOG(NOTICE) << "missing SIP FIFO "<<call_id;
+		LOG(NOTICE) << "missing SIP FIFO "<< call_id;
 		throw SIPError();
 	}	
-	LOG(DEBUG) << "blocking on fifo " << fifo;
+	LOG(DEBUG) << "blocking on fifo " << fifo << " for " << readTimeout << endl;
 	osip_message_t * msg =  fifo->read(readTimeout);	
 	if (!msg) throw SIPTimeout();
 	return msg;
