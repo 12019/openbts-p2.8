@@ -105,6 +105,7 @@ public:
 	void write(const std::string& call_id, osip_message_t * sip_msg );
 
 	/** Read sip message out of map+fifo. used by sip engine. */
+	// default read timeout is 3600000 msec.
 	osip_message_t * read(const std::string& call_id, unsigned readTimeout=3600000);
 	
 	/** Create a new entry in the map. */
@@ -186,6 +187,7 @@ public:
 
 	void write(const struct sockaddr_in*, osip_message_t*);
 
+	// default read timeout is 3600000 msec.
 	osip_message_t* read(const std::string& call_id , unsigned readTimeout=3600000)
 		{ return mSIPMap.read(call_id, readTimeout); }
 
