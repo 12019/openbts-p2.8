@@ -196,6 +196,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    return 0;
 	}
     }
+    LOG(INFO) << "Failed to obtain RAND" << endl;
     return 3;
 }
 
