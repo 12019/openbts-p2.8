@@ -90,6 +90,7 @@ osip_message_t * SIPMessageMap::read(const std::string& call_id, unsigned readTi
 	LOG(DEBUG) << "blocking on fifo " << fifo << " for " << readTimeout << " msec." << endl;
 	osip_message_t * msg =  fifo->read(readTimeout);	
 	if (!msg) throw SIPTimeout();
+	LOG(DEBUG) << "call_id=" << call_id << " msg=" << msg;
 	return msg;
 }
 
