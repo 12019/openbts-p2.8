@@ -512,7 +512,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// If success is true, we had a normal registration.
 	// Otherwise, we are here because of open registration.
 	// Either way, we're going to register a phone if we arrive here.
-
+	LOG(DEBUG) << "success: " << success << " openRegistration: " << openRegistration << endl;
 	if (success) {
 		LOG(INFO) << "registration SUCCESS: " << mobileID;
 	} else {

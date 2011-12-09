@@ -113,6 +113,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	success = engine.Register(SIPEngine::SIPRegister, &RAND); 
+	LOG(DEBUG) << success << " received: " << RAND << endl;
     }
     catch(SIPTimeout) {
 	LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
@@ -144,7 +145,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	uint64_t uRAND;
 	uint64_t lRAND;
 	gSubscriberRegistry.stringToUint(RAND, &uRAND, &lRAND);
-	LCH->send(L3AuthenticationRequest(0,L3RAND(uRAND,lRAND)));
+	LCH->send(L3AuthenticationRequest(0, L3RAND(uRAND, lRAND)));
 	L3Message* msg = getMessage(LCH);
 	L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
 	if (!resp) {
@@ -166,6 +167,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
     	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	    success = engine.Register(SIPEngine::SIPRegister, &RAND, IMSI, SRESstr.c_str()); 
+	    LOG(DEBUG) << success << " received: " << RAND << " <=> " << SRESstr << endl;
 	    if (!success) {
 		LCH->send(L3AuthenticationReject());
 		LCH->send(L3ChannelRelease());
@@ -216,8 +218,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    LOG(INFO) << "Ciphering Completed";
 	    return 0;
 	}
-    }
-    LOG(INFO) << "Failed to obtain RAND" << endl;
+    } else LOG(INFO) << "Failed to obtain RAND" << endl;
     return 3;
 }
 
