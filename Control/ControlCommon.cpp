@@ -27,9 +27,6 @@
 
 #include "ControlCommon.h"
 #include "TransactionTable.h"
-extern "C" {
-#include <osmocom/gsm/comp128.h>
-}
 #include <GSMLogicalChannel.h>
 #include <GSML3Message.h>
 #include <GSML3CCMessages.h>
@@ -94,16 +91,8 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	success = engine.Register(SIPEngine::SIPRegister, &RAND); 
 	LOG(DEBUG) << success << " received: " << RAND << endl;
     }
-    catch(SIPTimeout) {
-	LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
-	if(gConfig.defines("SIP.Proxy.Registration.Fallback"))
-	{// Fallback procedure to obtain RAND
-	    RAND = GSM::L3RAND().getRAND(16);
-	    LOG(INFO) << "Fallback RAND procedure initiated." << endl;
-	}
-	else
-	{// Reject with a "network failure" cause code, 0x11.
-	    LOG(INFO) << "SIP failure and no fallback: rejecting with a network failure cause code" << endl; 
+    catch(SIPTimeout) {	// Reject with a "network failure" cause code, 0x11.
+	    LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
 	    LCH->send(L3LocationUpdatingReject(0x11));
 	    // HACK -- wait long enough for a response
 	    // FIXME -- Why are we doing this?
@@ -111,19 +100,15 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    // Release the channel and return.
 	    LCH->send(L3ChannelRelease());
 	    return 1;
-	}
     }
 
     // Did we get a RAND for challenge-response?
     if (RAND.length() != 0) {
-	// Cache RAND value
-	gTMSITable.setRAND(IMSI, RAND.c_str());
-	LOG(DEBUG) << "RAND " << RAND.c_str() << " set for IMSI " << IMSI;
-	// Get the mobile's SRES.
 	LOG(INFO) << "sending " << RAND << " to mobile";
 	uint64_t uRAND;
 	uint64_t lRAND;
 	gSubscriberRegistry.stringToUint(RAND, &uRAND, &lRAND);
+	// Request the mobile's SRES.
 	LCH->send(L3AuthenticationRequest(0, L3RAND(uRAND, lRAND)));
 	L3Message* msg = getMessage(LCH);
 	L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
@@ -153,11 +138,8 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		return 2;
 	    }
 	}
-	catch(SIPTimeout) {
-	    LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
-	    if(!gConfig.defines("SIP.Proxy.Registration.Fallback"))
-	    {// Reject with a "network failure" cause code, 0x11.
-		LOG(INFO) << "SIP failure and no fallback: rejecting with a network failure cause code" << endl;
+	catch(SIPTimeout) {// Reject with a "network failure" cause code, 0x11.
+		LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
 		LCH->send(L3LocationUpdatingReject(0x11));
 		// HACK -- wait long enough for a response
 		// FIXME -- Why are we doing this?
@@ -165,25 +147,6 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		// Release the channel and return.
 		LCH->send(L3ChannelRelease());
 		return 1;
-	    } 
-	    else 
-	    {// Fallback to local SRES check
-		uint64_t Kc;
-		uint8_t SRES[4];
-		comp128((uint8_t *)gTMSITable.getKi(IMSI), (uint8_t *)RAND.c_str(), SRES, (uint8_t *)&Kc);
-		mobID.setKC(Kc);
-		int chk = SRESstr.compare(0, 4, (char *) SRES, 4);
-		LOG(INFO) << "mobile's SRES=0x" << hex << mobileSRES << "SRES=0x" << hex << SRES << " Kc=0x" << hex << Kc;
-		if(0 != chk) {
-			LOG(INFO) << "Local SRES authentication failed." << endl;
-			LCH->send(L3AuthenticationReject());
-			LCH->send(L3ChannelRelease());
-		}
-		else {
-			LOG(INFO) << "Local SRES authentication OK." << endl;
-			success = true;
-		}
-	    }
 	}
 	if(success) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
 	    LOG(INFO) << "Ciphering Command Will Send";
@@ -246,20 +209,6 @@ unsigned  Control::resolveIMSI(bool sameLAI, L3MobileIdentity& mobileID, Logical
 	if (mobileID.type()!=IMSIType) throw UnexpectedMessage();
 	// Return 0 to indicate that we have not yet assigned our own TMSI for this phone.
 	return 0;
-}
-
-/* Resolve a mobile ID to an IMSI and return KI if it is assigned. */
-unsigned char*  Control::resolveKI(L3MobileIdentity& mobID, LogicalChannel* LCH)
-{
-	// Returns known or assigned TMSI.
-	assert(LCH);
-	LOG(DEBUG) << "resolving mobile ID " << mobID ;
-
-	// IMSI already?  See if there's a TMSI already, too.
-	// This is a linear time operation, but should only happen on
-	// the first registration by this mobile.
-	if (mobID.type() == IMSIType) return (unsigned char *)gTMSITable.getKi(mobID.digits());
-	return NULL;
 }
 
 /* Resolve a mobile ID to an IMSI. */
