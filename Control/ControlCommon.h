@@ -131,8 +131,6 @@ void DCCHDispatcher(GSM::LogicalChannel *DCCH);
 */
 unsigned  resolveIMSI(bool sameLAI, GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
-        
-unsigned char*  resolveKI( GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
 /**
 	Resolve a mobile ID to an IMSI.
@@ -149,10 +147,6 @@ void  resolveIMSI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 // 3 - error inside authentication routine
 unsigned attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* LCH);
 
-/*
-  Resolve a mobile ID to a Ki.
- */
-unsigned char*  resolveKI(GSM::L3MobileIdentity& mobID, GSM::LogicalChannel* LCH);
 
 /**@name Control-layer exceptions. */
 //@{
