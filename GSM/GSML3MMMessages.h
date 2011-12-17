@@ -440,7 +440,7 @@ class L3AuthenticationResponse : public L3MMMessage {
 	int MTI() const { return AuthenticationResponse; }
 
 	const L3SRES& SRES() const { return mSRES; }
-        bool checkSRES(uint8_t * sres) { return mSRES.checkSRES(sres); }
+        void setSRES(L3SRES s) { mSRES = L3SRES(s.value()); }
 	size_t l2BodyLength() const { return mSRES.lengthV(); }
 	void parseBody(const L3Frame&, size_t &rp);
 	void text(std::ostream&) const;

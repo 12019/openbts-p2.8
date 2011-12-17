@@ -53,6 +53,14 @@ using namespace Control;
 
 L3Message* getMessageCore(LogicalChannel *LCH, unsigned SAPI)
 {
+    if(LCH->type() == AuthTestLCHType)
+    {//handle test authentication channel
+	AuthTestLogicalChannel * L = dynamic_cast<AuthTestLogicalChannel*>(LCH);
+	L3AuthenticationResponse * msg = new L3AuthenticationResponse;
+	msg->setSRES(L->getSRES());
+	return msg;
+    }
+
 	unsigned timeout_ms = LCH->N200() * T200ms;
 	L3Frame *rcv = LCH->recv(timeout_ms,SAPI);
 	if (rcv==NULL) {
