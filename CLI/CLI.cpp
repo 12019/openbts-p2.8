@@ -715,7 +715,7 @@ int testauth(int argc, char** argv, ostream& os, istream& is)
     if(3 == argc) sres = strtoul(argv[2], NULL, 10);//C++ standard guarantees that unsigned long is at least 32 bits wide
     GSM::L3SRES s(sres);
     GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(s);
-    GSM::L3MobileIdentity mobID;
+    GSM::L3MobileIdentity mobID(IMSI);
     os << "authentication result for " << IMSI << ": " << Control::attemptAuth(mobID, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
     return SUCCESS;
 }
