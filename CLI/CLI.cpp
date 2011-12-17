@@ -30,7 +30,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-
 #include <config.h>
 
 // #include <Config.h>
@@ -38,6 +37,7 @@
 
 #include <GSMConfig.h>
 #include <GSMLogicalChannel.h>
+#include <GSML3MMElements.h>
 #include <ControlCommon.h>
 #include <TransactionTable.h>
 #include <TRXManager.h>
@@ -701,6 +701,24 @@ int power(int argc, char **argv, ostream& os, istream& is)
 	return SUCCESS;
 }
 
+int testauth(int argc, char** argv, ostream& os, istream& is)
+{
+    if(argc != 2 && argc != 3) return BAD_NUM_ARGS;
+
+    char * IMSI = argv[1];
+    if (strnlen(IMSI, 32) > 15) {
+	os << IMSI << " is not a valid IMSI" << endl;
+	return BAD_VALUE;
+    }
+    
+    uint32_t sres = 0;// use SRES is available
+    if(3 == argc) sres = strtoul(argv[2], NULL, 10);//C++ standard guarantees that unsigned long is at least 32 bits wide
+    GSM::L3SRES s(sres);
+    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(s);
+    GSM::L3MobileIdentity mobID;
+    os << "authentication result for " << IMSI << ": " << Control::attemptAuth(mobID, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
+    return SUCCESS;
+}
 
 int rxgain(int argc, char** argv, ostream& os, istream& is)
 {
@@ -754,6 +772,7 @@ Parser::Parser()
 	addCommand("page", page, "[IMSI time] -- dump the paging table or page the given IMSI for the given period");
 	addCommand("chans", chans, "-- report PHY status for active channels");
 	addCommand("power", power, "[minAtten maxAtten] -- report current attentuation or set min/max bounds");
+	addCommand("testauth", testauth, "<IMSI> [SRES] -- perform test authentication against for IMSI (using optional SRES) against backend");
         addCommand("rxgain", rxgain, "[newRxgain] -- get/set the RX gain in dB");
         addCommand("noise", noise, "-- report receive noise level in RSSI dB");
 	addCommand("unconfig", unconfig, "key -- remove a config value");
