@@ -703,18 +703,19 @@ int power(int argc, char **argv, ostream& os, istream& is)
 
 int testauth(int argc, char** argv, ostream& os, istream& is)
 {
-    if(argc != 2 && argc != 3) return BAD_NUM_ARGS;
+    if (argc != 2 && argc != 3) return BAD_NUM_ARGS;
 
     char * IMSI = argv[1];
     if (strnlen(IMSI, 32) > 15) {
-	os << IMSI << " is not a valid IMSI" << endl;
-	return BAD_VALUE;
+      os << IMSI << " is not a valid IMSI" << endl;
+      return BAD_VALUE;
     }
     
     uint32_t sres = 0;// use SRES is available
-    if(3 == argc) sres = strtoul(argv[2], NULL, 10);//C++ standard guarantees that unsigned long is at least 32 bits wide
-    GSM::L3SRES s(sres);
-    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(s);
+    //C++ standard guarantees that unsigned long is at least 32 bits wide so strtoul is ok
+    if (3 == argc) sres = strtoul(argv[2], NULL, 10);
+
+    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(GSM::L3SRES(sres));
     GSM::L3MobileIdentity mobID(IMSI);
     os << "authentication result for " << IMSI << ": " << Control::attemptAuth(mobID, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
     return SUCCESS;
