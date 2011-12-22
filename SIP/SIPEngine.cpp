@@ -237,6 +237,7 @@ string randy401(osip_message_t *msg)
 	osip_www_authenticate_t *auth = (osip_www_authenticate_t*)osip_list_get(&msg->www_authenticates, 0);
 	if (auth == NULL) return "";
 	char *rand = osip_www_authenticate_get_nonce(auth);
+	LOG(DEBUG) << "401 RAND: " << rand << endl;
 	string rands = rand ? string(rand) : "";
 	if (rands.length()!=32) {
 		LOG(WARNING) << "SIP RAND wrong length: " << rands;
@@ -300,12 +301,12 @@ bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 		// specific status
-		if (status==200) {
+		if (status == 200) {
 			LOG(INFO) << "REGISTER success";
 			success = true;
 			break;
 		}
-		if (status==401) {
+		if (status == 401) {
 			string wRAND = randy401(msg);
 			// if rand is included on 401 unauthorized, then the challenge-response game is afoot
 			if (wRAND.length() != 0 && RAND != NULL) {
@@ -315,15 +316,15 @@ bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const
 				osip_message_free(reg);
 				return false;
 			} else {
-			LOG(INFO) << "REGISTER fail -- unauthorized";
-			break;
+			  LOG(INFO) << "REGISTER fail [" << wRAND << "]-- unauthorized";
+			  break;
 		}
 		}
-		if (status==404) {
+		if (status == 404) {
 			LOG(INFO) << "REGISTER fail -- not found";
 			break;
 		}
-		if (status>=200) {
+		if (status >= 200) {
 			LOG(NOTICE) << "REGISTER unexpected response " << status;
 			break;
 		}
