@@ -206,11 +206,14 @@ string randy401(osip_message_t *msg)
 {
 	if (msg->status_code != 401) return "";
 	osip_www_authenticate_t *auth = (osip_www_authenticate_t*)osip_list_get(&msg->www_authenticates, 0);
-	if (auth == NULL) return "";
+	if (auth == NULL) { 
+	    LOG(DEBUG) << "401 RAND: failed to obtain auth, oSIP list size " << osip_list_size(&msg->www_authenticates) << endl; 
+	    return ""; 
+	}
 	char *rand = osip_www_authenticate_get_nonce(auth);
 	LOG(DEBUG) << "401 RAND: " << rand << endl;
 	string rands = rand ? string(rand) : "";
-	if (rands.length()!=32) {
+	if (rands.length() != 32) {
 		LOG(WARNING) << "SIP RAND wrong length: " << rands;
 		return "";
 	}
