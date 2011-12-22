@@ -311,7 +311,7 @@ class AuthTestLogicalChannel : public LogicalChannel {
 	L3SRES atSRES;
     public:
 	AuthTestLogicalChannel(L3SRES s) { atSRES = L3SRES(s.value()); }
-	void send(const L3Message&) {}
+	void send(const L3Frame& frame, unsigned SAPI=0) {}
 // Needed for special handling inside Control::getMessage(LCH);
 	ChannelType type() const { return AuthTestLCHType; }
 	L3SRES getSRES() const { return atSRES; }
