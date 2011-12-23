@@ -70,9 +70,9 @@ void SIPMessageMap::write(const std::string& call_id, osip_message_t * msg)
 		LOG(INFO) << "SR port Update Problem";
 	}
 	OSIPMessageFIFO * fifo = mMap.readNoBlock(call_id);
-	if( fifo==NULL ) {
+	if(NULL == fifo) {
 		// FIXME -- If this write fails, send "call leg non-existent" response on SIP interface.
-		LOG(NOTICE) << "missing SIP FIFO "<<call_id;
+		LOG(NOTICE) << "missing SIP FIFO " << call_id;
 		throw SIPError();
 	}
 	LOG(DEBUG) << "write on fifo " << fifo;
@@ -258,17 +258,17 @@ void SIPInterface::drive()
 		// message (instead of aborting)
 		// Don't free call_id_num.  It points into msg->call_id.
 		char * call_id_num = osip_call_id_get_number(msg->call_id);	
-		if( call_id_num == NULL ) {
+		if(NULL == call_id_num) {
 			LOG(WARNING) << "message with no call id";
 			throw SIPError();
 		}
-		LOG(DEBUG) << "got message " << msg << " with call id " << call_id_num << " and writing it to the map.";
+		LOG(DEBUG) << "got message with call id " << call_id_num << " and writing it to the map.";
 		string call_num(call_id_num);
 		// Don't free msg.  Whoever reads the FIFO will do that.
 		mSIPMap.write(call_num, msg);
 	}
 	catch(SIPException) {
-		LOG(WARNING) << "cannot parse SIP message: " << mReadBuffer;
+		LOG(WARNING) << "failed to handle SIP message: " << mReadBuffer;
 	}
 }
 

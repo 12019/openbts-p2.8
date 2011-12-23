@@ -143,7 +143,7 @@ private:
 	SIPMessageMap mSIPMap;	
 
 public:
-	// 2 ways to starte sip interface. 
+	// 2 ways to start sip interface. 
 	// Ex 1.
 	// SIPInterface si;
 	// si.localAdder(port0, ip_str, port1);
