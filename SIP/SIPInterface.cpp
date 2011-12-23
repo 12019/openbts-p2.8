@@ -179,7 +179,7 @@ void SIPInterface::drive()
 {// All inbound SIP messages go here for processing.
 
 	LOG(DEBUG) << "blocking on socket";
-	size_t numRead = mSIPSocket.read(mReadBuffer);
+	int numRead = mSIPSocket.read(mReadBuffer);
 	if (numRead < 0) {
 	    LOG(ALERT) << "cannot read SIP socket.";
 	    return;
