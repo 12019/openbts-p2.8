@@ -176,14 +176,15 @@ void SIPInterface::write(const struct sockaddr_in* dest, osip_message_t *msg)
 
 
 void SIPInterface::drive() 
-{
-	// All inbound SIP messages go here for processing.
+{// All inbound SIP messages go here for processing.
 
 	LOG(DEBUG) << "blocking on socket";
-	int numRead = mSIPSocket.read(mReadBuffer);
-	if (numRead<0) {
-		LOG(ALERT) << "cannot read SIP socket.";
-		return;
+	size_t numRead = mSIPSocket.read(mReadBuffer);
+	if (numRead < 0) {
+	    LOG(ALERT) << "cannot read SIP socket.";
+	    return;
+	} else {
+	    LOG(DEBUG) << numRead << " bytes read";
 	}
 	// FIXME -- Is this +1 offset correct?  Check it.
 	mReadBuffer[numRead] = '\0';
@@ -204,14 +205,11 @@ void SIPInterface::drive()
 #endif
 
 	char firstLine[101];
-	sscanf(mReadBuffer,"%100[^\n]",firstLine);
+	sscanf(mReadBuffer,"%100[^\n]", firstLine);
 	LOG(INFO) << "read " << firstLine;
 	LOG(DEBUG) << "read " << mReadBuffer;
 
-
-	try {
-
-		// Parse the mesage.
+	try {// Parse the mesage.
 		osip_message_t * msg;
 		int osip = osip_message_init(&msg);
 		if (0 != osip) {
