@@ -223,15 +223,28 @@ void SIPInterface::drive()
 
 		// Parse the mesage.
 		osip_message_t * msg;
-		int i = osip_message_init(&msg);
-		LOG(INFO) << "osip_message_init " << i;
-		int j = osip_message_parse(msg, mReadBuffer, numRead);
-		if (0 != j ) {
-		    LOG(ERR) << "SIP failure - osip_message_parse returned: " << j;
+		int osip = osip_message_init(&msg);
+		if (0 != osip) {
+		    LOG(ERR) << "SIP failure - osip_message_init returned: " << osip;
+    		    throw SIPError();
+		}
+		osip = osip_message_parse(msg, mReadBuffer, numRead);
+		if (0 != osip) {
+		    LOG(ERR) << "SIP failure - osip_message_parse returned: " << osip;
     		    throw SIPError();
 		}
 
 		if (msg->sip_method) LOG(DEBUG) << "read method " << msg->sip_method;
+
+		char * dest = NULL;
+		size_t length = 0;
+		osip = osip_message_to_str(msg, &dest, &length);
+		if (0 != osip) {
+		    LOG(INFO) << "cannot get printable message";
+		} else {
+		    LOG(INFO) << "parsed SIP: " << dest << endl;
+		    osip_free(dest);
+		}
 
 		// Must check if msg is an invite.
 		// if it is, handle appropriatly.
