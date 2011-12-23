@@ -225,10 +225,11 @@ void SIPInterface::drive()
 		osip_message_t * msg;
 		int i = osip_message_init(&msg);
 		LOG(INFO) << "osip_message_init " << i;
-		int j = osip_message_parse(msg, mReadBuffer, strlen(mReadBuffer));
-		// seems like it ought to do something more than display an error,
-		// but it used to not even do that.
-		LOG(INFO) << "osip_message_parse " << j;
+		int j = osip_message_parse(msg, mReadBuffer, numRead);
+		if (0 != j ) {
+		    LOG(ERR) << "SIP failure - osip_message_parse returned: " << j;
+    		    throw SIPError();
+		}
 
 		if (msg->sip_method) LOG(DEBUG) << "read method " << msg->sip_method;
 
