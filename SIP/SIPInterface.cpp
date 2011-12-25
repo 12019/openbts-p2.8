@@ -221,11 +221,22 @@ void SIPInterface::drive()
 		    LOG(ERR) << "SIP failure - osip_message_parse returned: " << osip;
     		    throw SIPError();
 		}
-
-		if (msg->sip_method) LOG(DEBUG) << "read method " << msg->sip_method;
-
+		
 		char * dest = NULL;
 		size_t length = 0;
+		char *p = strstr(mReadBuffer, "nonce");
+		if (p) {
+		  LOG(DEBUG) << "workaround for oSIP parser revealed: " << strndup(p + 6, 32) << endl;
+		  osip_www_authenticate_t *auth;
+		  osip_www_authenticate_init(&auth);
+		  osip_www_authenticate_set_auth_type(auth, osip_strdup("Digest"));
+		  osip_www_authenticate_set_nonce(auth, osip_strdup(strndup(p + 6, 32)));
+		  osip = osip_list_add (&msg->www_authenticates, auth, -1);
+		  if (osip < 0) LOG(ERR) << "problem adding www_authenticate" << endl;
+		}
+
+		if (msg->sip_method) LOG(DEBUG) << "read method " << msg->sip_method;
+   
 		osip = osip_message_to_str(msg, &dest, &length);
 		if (0 != osip) {
 		    LOG(INFO) << "cannot get printable message";
