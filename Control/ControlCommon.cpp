@@ -147,7 +147,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    }
 	}
 	catch(SIPTimeout) {// Reject with a "network failure" cause code, 0x11.
-		LOG(ALERT) "SIP authentication timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+		LOG(ALERT) "SIP authentication timed out. Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
 		LCH->send(L3LocationUpdatingReject(0x11));
 		// HACK -- wait long enough for a response
 		// FIXME -- Why are we doing this?
