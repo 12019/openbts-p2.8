@@ -154,6 +154,8 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	delete msg;
 	// verify SRES 
 	ostringstream os;
+	os.width(8);
+	os.fill('0');
 	os << hex << mobileSRES;
 	string SRESstr = os.str();
 	try {
