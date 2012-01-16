@@ -260,16 +260,4 @@ string L3RAND::getRAND(size_t length)
     return random;
 }
 
-const char * L3RAND::getRandToA3A8()
-{
-    SubscriberRegistry sr;
-    return sr.uintToString(mRUpper, mRLower).c_str();
-}
-
-bool L3SRES::checkSRES(uint8_t * sres)
-{
-    if(0 == memcmp(reinterpret_cast<const uint8_t *>(mValue), sres, 4)) return true;
-    return false;
-}
-
 // vim: ts=4 sw=4
