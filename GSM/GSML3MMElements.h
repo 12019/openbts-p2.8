@@ -188,16 +188,13 @@ class L3RAND : public L3ProtocolElement {
 
 	private:
 
-	uint64_t mRUpper;		///< upper 64 bits
-	uint64_t mRLower;		///< lower 64 bits
+	uint64_t mRUpper;	///< upper 64 bits
+	uint64_t mRLower;	///< lower 64 bits
 
 	public:
 
 	L3RAND() {}
-	
-	L3RAND(uint64_t wRUpper, uint64_t wRLower):
-		mRUpper(wRUpper),mRLower(wRLower)
-	{ }
+	L3RAND(uint64_t wRUpper, uint64_t wRLower):mRUpper(wRUpper),mRLower(wRLower) {}
 
 	size_t lengthV() const { return 16; }
 	void writeV(L3Frame&, size_t&) const;
@@ -205,9 +202,7 @@ class L3RAND : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
 	string getRAND(size_t length);
-	const char * getRandToA3A8();
 };
-
 
 /** GSM 04.08 10.5.3.2 */
 class L3SRES : public L3ProtocolElement {
@@ -218,10 +213,7 @@ class L3SRES : public L3ProtocolElement {
 
 	public:
 
-	L3SRES(uint32_t wValue):
-		mValue(wValue)
-	{ }
-
+	L3SRES(uint32_t wValue):mValue(wValue) {}
 	L3SRES():mValue(0) {}
 
 	uint32_t value() const { return mValue; }
@@ -231,7 +223,6 @@ class L3SRES : public L3ProtocolElement {
 	void parseV(const L3Frame&, size_t&);
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
 	void text(std::ostream&) const;
-	bool checkSRES(uint8_t *);
 };
 
 } // namespace GSM
