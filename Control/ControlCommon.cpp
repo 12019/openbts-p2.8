@@ -91,7 +91,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 // Try to register the IMSI.
 // This will be set true if registration succeeded in the SIP world.
     bool success = false;
-    string RAND;
+    string RAND, Kc;
     LOG(INFO) << "Authenticating " << name << "..." << endl;
     try {
 	SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
@@ -140,7 +140,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	try {
     	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-	    success = engine.Register(SIPEngine::SIPRegister, &RAND, IMSI, SRESstr.c_str()); 
+	    success = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str()); 
 	    LOG(DEBUG) << success << " received: " << RAND << " <=> " << SRESstr << endl;
 	    if (!success) {
 		LCH->send(L3AuthenticationReject());

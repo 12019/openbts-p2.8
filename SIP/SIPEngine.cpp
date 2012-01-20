@@ -220,7 +220,7 @@ string randy401(osip_message_t *msg)
 	return rands;
 }
 
-bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const char *SRES)
+bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
@@ -278,6 +278,13 @@ bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const
 		if (status == 200) {
 			LOG(INFO) << "REGISTER success";
 			success = true;
+			osip_authentication_info_t * auth_info;
+			osip_message_get_authentication_info(msg, 0, &auth_info);
+			if (NULL == auth_info) break;
+			char * qop = osip_authentication_info_get_qop_options(auth_info);
+			char * key = osip_authentication_info_get_rspauth(auth_info);
+			LOG(INFO) << "found authentication info in response: " << qop << ", " << key;
+			*Kc = string(key);
 			break;
 		}
 		if (status == 401) {
@@ -290,7 +297,7 @@ bool SIPEngine::Register( Method wMethod , string *RAND, const char *IMSI, const
 				osip_message_free(reg);
 				return false;
 			} else {
-			  LOG(INFO) << "REGISTER fail [" << wRAND << "]-- unauthorized";
+			  LOG(DEBUG) << "REGISTER fail [" << wRAND << "]-- unauthorized";
 			  break;
 		}
 		}
