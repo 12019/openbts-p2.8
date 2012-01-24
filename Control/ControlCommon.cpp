@@ -96,7 +96,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
     try {
 	SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-	success = engine.Register(SIPEngine::SIPRegister, &RAND); 
+	success = engine.Register(SIPEngine::SIPRegister, &RAND);
 	LOG(DEBUG) << success << " received: " << RAND << endl;
     }
     catch(SIPTimeout) {	// Reject with a "network failure" cause code, 0x11.
@@ -131,7 +131,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	LOG(INFO) << *resp;
 	uint32_t mobileSRES = resp->SRES().value();
 	delete msg;
-	// verify SRES 
+	// verify SRES
 	ostringstream os;
 	os.width(8);
 	os.fill('0');
@@ -140,8 +140,8 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	try {
     	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
 	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-	    success = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str()); 
-	    LOG(DEBUG) << success << " received: " << RAND << " <=> " << SRESstr << endl;
+	    success = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str());
+	    LOG(DEBUG) << success << " received: " << RAND << " <=> " << SRESstr << " <=> " << Kc << endl;
 	    if (!success) {
 		LCH->send(L3AuthenticationReject());
 		LCH->send(L3ChannelRelease());
@@ -164,7 +164,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    LOG(INFO) << "Ciphering Command Sent";
 	    L3Frame* resp = LCH->recv();
 	    LOG(INFO) << "Received";
-	    if(!resp) { LOG(NOTICE) << "Ciphering Error"; } 
+	    if(!resp) { LOG(NOTICE) << "Ciphering Error"; }
 	    else { LOG(INFO) << *resp <<"Responce"; }
 	    delete resp;
 	    LOG(INFO) << "Ciphering Completed";

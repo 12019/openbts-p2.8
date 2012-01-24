@@ -57,9 +57,9 @@ static const char* createTMSITable = {
 		"PREV_LAC INTEGER, "			// previous network LAC
 		"DEG_LAT FLOAT, "				// RRLP result
 		"DEG_LONG FLOAT, "				// RRLP result
-//FIXME: would 2 integers and sqlite3_column_int64() would be better option?
-		"RAND TEXT, "			// RAND random challenge
-		"SRES TEXT"			// authentication response
+// N. B> Kc is 64 bit in COMP128v1 so more efficient storage is possible
+// but it'll be less portable is we use other key generation functions with different key length
+		"KC TEXT"			// Kc cipher key
 	")"
 };
 
@@ -139,7 +139,6 @@ unsigned TMSITable::assign(const char* IMSI, const GSM::L3LocationUpdatingReques
 	}
 	return TMSI;
 }
-	
 
 
 void TMSITable::touch(unsigned TMSI) const
@@ -240,23 +239,23 @@ bool TMSITable::classmark(const char* IMSI, const GSM::L3MobileStationClassmark2
 	return sqlite3_command(mDB,query);
 }
 
-bool TMSITable::setRAND(const char * IMSI, const char * rand)
+
+bool TMSITable::setKc(const char * IMSI, const char * Kc)
 {
-	char query[1024];
-	snprintf(query, 1024,
-		"UPDATE TMSI_TABLE SET RAND=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"",
-		rand, (unsigned) time(NULL), IMSI);
-	return sqlite3_command(mDB, query);
-    
+    char query[1024];
+    snprintf(query, 1024, "UPDATE TMSI_TABLE SET KC=\"%s\",ACCESSED=%u WHERE IMSI=\"%s\"", Kc, (unsigned) time(NULL), IMSI);
+    return sqlite3_command(mDB, query);
 }
 
+
 // Returned string must be free'd by the caller.
-char * TMSITable::getRAND(const char * IMSI) const
+char * TMSITable::getKc(const char * IMSI) const
 {
-	char * RAND = NULL;
-	sqlite3_single_lookup(mDB, "TMSI_TABLE", "IMSI", IMSI, "RAND", RAND);
-	return RAND;
+    char * Kc = NULL;
+    sqlite3_single_lookup(mDB, "TMSI_TABLE", "IMSI", IMSI, "KC", Kc);
+    return Kc;
 }
+
 
 unsigned TMSITable::nextL3TI(const char* IMSI)
 {
