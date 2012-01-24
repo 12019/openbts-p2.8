@@ -283,8 +283,8 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 			if (NULL == auth_info) break;
 			char * qop = osip_authentication_info_get_qop_options(auth_info);
 			char * key = osip_authentication_info_get_rspauth(auth_info);
-			LOG(INFO) << "found authentication info in response: " << qop << ", " << key;
-			*Kc = string(key);
+			LOG(INFO) << "found " << qop << " in response: " << key;
+			*Kc = string(key + 1, 16);
 			break;
 		}
 		if (status == 401) {
