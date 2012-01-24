@@ -181,7 +181,6 @@ void SIPEngine::saveResponse(osip_message_t *response)
 }
 
 
-
 void SIPEngine::saveBYE(const osip_message_t *BYE, bool mine)
 {
 	// Instead of cloning, why not just keep the old one?
@@ -208,7 +207,6 @@ bool SIPEngine::instigator()
 	return (!strncmp(from_uri->username,mSIPUsername.c_str(),15) &&
 		!strncmp(from_uri->host, mSIPIP.c_str(), 30));
 }
-
 void SIPEngine::user( const char * IMSI )
 {
 	LOG(DEBUG) << "IMSI=" << IMSI;
@@ -219,10 +217,9 @@ void SIPEngine::user( const char * IMSI )
 	// IMSI gets prefixed with "IMSI" to form a SIP username
 	mSIPUsername = string("IMSI") + IMSI;
 }
-	
 
 
-void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origID, const char *origHost) 
+void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origID, const char *origHost)
 {
 	LOG(DEBUG) << "IMSI=" << IMSI << " " << wCallID << " " << origID << "@" << origHost;  
 	mSIPUsername = string("IMSI") + IMSI;
@@ -230,6 +227,7 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteUsername = string(origID);
 	mRemoteDomain = string(origHost);
 }
+
 
 string randy401(osip_message_t *msg)
 {
@@ -259,45 +257,43 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 	// Initial configuration for sip message.
 	// Make a new from tag and new branch.
 	// make new mCSeq.
-	
-	// Generate SIP Message 
-	// Either a register or unregister. Only difference 
+
+	// Generate SIP Message
+	// Either a register or unregister. Only difference
 	// is expiration period.
-	osip_message_t * reg; 
+	osip_message_t * reg;
 	if (wMethod == SIPRegister ){
-		reg = sip_register( mSIPUsername.c_str(), 
+		reg = sip_register( mSIPUsername.c_str(),
 			60*gConfig.getNum("SIP.RegistrationPeriod"),
-			mSIPPort, mSIPIP.c_str(), 
-			mProxyIP.c_str(), mMyTag.c_str(), 
+			mSIPPort, mSIPIP.c_str(),
+			mProxyIP.c_str(), mMyTag.c_str(),
 			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
 			RAND, IMSI, SRES
-		); 
+		);
 	} else if (wMethod == SIPUnregister ) {
-		reg = sip_register( mSIPUsername.c_str(), 
+		reg = sip_register( mSIPUsername.c_str(),
 			0,
-			mSIPPort, mSIPIP.c_str(), 
-			mProxyIP.c_str(), mMyTag.c_str(), 
+			mSIPPort, mSIPIP.c_str(),
+			mProxyIP.c_str(), mMyTag.c_str(),
 			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
 			NULL, NULL, NULL
 		);
 	} else { assert(0); }
- 
+
 	LOG(DEBUG) << "writing registration " << reg;
-	gSIPInterface.write(&mProxyAddr,reg);	
+	gSIPInterface.write(&mProxyAddr,reg);
 
 	bool success = false;
 	osip_message_t *msg = NULL;
 	Timeval timeout(gConfig.getNum("SIP.Timer.F"));
 	while (!timeout.passed()) {
-		try {
-			// SIPInterface::read will throw SIPTIimeout if it times out.
-			// It should not return NULL.
-			msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.E"));
-		} catch (SIPTimeout) {
-			// send again
-			LOG(NOTICE) << "SIP REGISTER packet to " << mProxyIP << ":" << mProxyPort << " timeout; resending"; 
-			gSIPInterface.write(&mProxyAddr,reg);	
-			continue;
+		try {// SIPInterface::read will throw SIPTIimeout if it times out.
+		    // It should not return NULL.
+		    msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.E"));
+		} catch (SIPTimeout) {// send again
+		    LOG(NOTICE) << "SIP REGISTER packet to " << mProxyIP << ":" << mProxyPort << " timeout; resending";
+		    gSIPInterface.write(&mProxyAddr,reg);
+		    continue;
 		}
 
 		assert(msg);
@@ -305,39 +301,33 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 		// specific status
 		if (status == 200) {
-			LOG(INFO) << "REGISTER success";
-			success = true;
-			osip_authentication_info_t * auth_info;
-			osip_message_get_authentication_info(msg, 0, &auth_info);
-			if (NULL == auth_info) break;
-			char * qop = osip_authentication_info_get_qop_options(auth_info);
-			char * key = osip_authentication_info_get_rspauth(auth_info);
-			LOG(INFO) << "found " << qop << " in response: " << key;
-			*Kc = string(key + 1, 16);
-			break;
+		    LOG(INFO) << "REGISTER success";
+		    success = true;
+		    osip_authentication_info_t * auth_info;
+		    osip_message_get_authentication_info(msg, 0, &auth_info);
+		    if (NULL == auth_info) break;
+		    char * qop = osip_authentication_info_get_qop_options(auth_info);
+		    char * key = osip_authentication_info_get_rspauth(auth_info);
+		    LOG(INFO) << "found " << qop << " in response: " << key;
+		    *Kc = string(key + 1, 16);
+		    break;
 		}
 		if (status == 401) {
-			string wRAND = randy401(msg);
-			// if rand is included on 401 unauthorized, then the challenge-response game is afoot
-			if (wRAND.length() != 0 && RAND != NULL) {
-				LOG(INFO) << "REGISTER challenge RAND=" << wRAND;
-				*RAND = wRAND;
-				osip_message_free(msg);
-				osip_message_free(reg);
-				return false;
-			} else {
-			  LOG(DEBUG) << "REGISTER fail [" << wRAND << "]-- unauthorized";
-			  break;
-		}
-		}
-		if (status == 404) {
-			LOG(INFO) << "REGISTER fail -- not found";
+		    string wRAND = randy401(msg);
+		    // if rand is included on 401 unauthorized, then the challenge-response game is afoot
+		    if (wRAND.length() != 0 && RAND != NULL) {
+			LOG(INFO) << "REGISTER challenge RAND=" << wRAND;
+			*RAND = wRAND;
+			osip_message_free(msg);
+			osip_message_free(reg);
+			return false;
+		    } else {
+			LOG(DEBUG) << "REGISTER fail [" << wRAND << "]-- unauthorized";
 			break;
+		    }
 		}
-		if (status >= 200) {
-			LOG(NOTICE) << "REGISTER unexpected response " << status;
-			break;
-		}
+		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; break; }
+		if (status >= 200) { LOG(NOTICE) << "REGISTER unexpected response " << status; break; }
 	}
 
 	if (!msg) {
@@ -347,10 +337,9 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 
 	osip_message_free(reg);
 	osip_message_free(msg);
-	gSIPInterface.removeCall(mCallID);	
+	gSIPInterface.removeCall(mCallID);
 	return success;
 }
-
 
 
 const char* geoprivTemplate = 
