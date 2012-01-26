@@ -63,6 +63,17 @@ void LogicalChannel::open()
 }
 
 
+// set Kc for L1 encoder
+bool LogicalChannel::setKc(const char * key)
+{
+    assert(mL1);
+    uint8_t Kc[8];
+    if(osmo_hexparse(key, Kc, 8) != 8) return false;
+    mL1->setKc(Kc);
+    return true;
+}
+
+
 void LogicalChannel::connect()
 {
 	mMux.downstream(mL1);
@@ -80,7 +91,6 @@ void LogicalChannel::downstream(ARFCNManager* radio)
 	mL1->downstream(radio);
 	if (mSACCH) mSACCH->downstream(radio);
 }
-
 
 
 // Serialize and send an L3Message with a given primitive.
@@ -114,7 +124,7 @@ void CCCHLogicalChannel::open()
 }
 
 
-void CCCHLogicalChannel::serviceLoop() 
+void CCCHLogicalChannel::serviceLoop()
 {
 	// build the idle frame
 	static const L3PagingRequestType1 filler;

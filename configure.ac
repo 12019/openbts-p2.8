@@ -124,6 +124,9 @@ PKG_CHECK_MODULES(OSIP, libosip2)
 # Check for A5 and COMP128 library
 PKG_CHECK_MODULES(LIBOSMOGSM, libosmogsm)
 
+# Check for Osmocom core library
+PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore)
+
 # Defines ORTP_CFLAGS, ORTP_INCLUDEDIR, and ORTP_LIBS
 PKG_CHECK_MODULES(ORTP, ortp)
 
