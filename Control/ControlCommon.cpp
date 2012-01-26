@@ -138,7 +138,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	os << hex << mobileSRES;
 	string SRESstr = os.str();
 	try {
-    	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
+    	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(), IMSI);
 	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	    success = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str());
 	    LOG(DEBUG) << success << " received: " << RAND << " <=> " << SRESstr << " <=> " << Kc << endl;
@@ -159,16 +159,21 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		return 1;
 	}
 	if(success) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
-	    LOG(INFO) << "Ciphering Command Will Send";
-	    LCH->send(GSM::L3CipheringModeCommand());
-	    LOG(INFO) << "Ciphering Command Sent";
-	    L3Frame* resp = LCH->recv();
-	    LOG(INFO) << "Received";
-	    if(!resp) { LOG(NOTICE) << "Ciphering Error"; }
-	    else { LOG(INFO) << *resp <<"Responce"; }
-	    delete resp;
-	    LOG(INFO) << "Ciphering Completed";
-	    return 0;
+	    if(gTMSITable.setKc(IMSI, Kc.c_str())) {
+		LOG(INFO) << "Ciphering Command Will Send";
+		LCH->send(GSM::L3CipheringModeCommand());
+		LOG(INFO) << "Ciphering Command Sent";
+		L3Frame* resp = LCH->recv();
+		LOG(INFO) << "Received";
+		if(!resp) { LOG(ERR) << "Ciphering Error"; }
+		else { LOG(INFO) << *resp << " Responce."; }
+		delete resp;
+		LCH->setKc(Kc.c_str());
+		LOG(INFO) << "Ciphering key set for LCH.";
+		return 0;
+	    }
+	    LOG(ERR) << "Failed to set Kc=" << Kc << " for IMSI=" << IMSI << " in TMSI table.";
+	    return 4;
 	}
     } else LOG(INFO) << "Failed to obtain RAND" << endl;
     return 3;

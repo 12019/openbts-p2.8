@@ -33,16 +33,16 @@
 
 #include <sys/types.h>
 #include <pthread.h>
-
 #include <iostream>
-
+extern "C" {
+#include <osmocom/core/utils.h>
+}
 #include "GSML1FEC.h"
 #include "GSMSAPMux.h"
 #include "GSML2LAPDm.h"
 #include "GSML3RRElements.h"
 #include "GSMTDMA.h"
 #include <TransactionTable.h>
-
 #include <Logger.h>
 
 class ARFCNManager;
@@ -95,8 +95,7 @@ public:
 		Blank initializer just nulls the pointers.
 		Specific sub-class initializers allocate new components as needed.
 	*/
-	LogicalChannel()
-		:mL1(NULL),mSACCH(NULL)
+	LogicalChannel():mL1(NULL),mSACCH(NULL)
 	{
 		for (int i=0; i<4; i++) mL2[i]=NULL;
 	}
@@ -204,6 +203,9 @@ public:
 
 	/** Return true if the channel is active. */
 	bool active() const { assert(mL1); return mL1->active(); }
+
+	// set Kc for L1 encoder
+	bool setKc(const char * key);
 
 	/** The TDMA parameters for the transmit side. */
 	const TDMAMapping& txMapping() const { assert(mL1); return mL1->txMapping(); }
