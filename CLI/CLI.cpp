@@ -701,6 +701,18 @@ int power(int argc, char **argv, ostream& os, istream& is)
 	return SUCCESS;
 }
 
+int getkc(int argc, char** argv, ostream& os, istream& is)
+{
+    if (argc != 2) return BAD_NUM_ARGS;
+    char * IMSI = argv[1];
+    if (strnlen(IMSI, 32) > 15) {
+	os << IMSI << " is not a valid IMSI" << endl;
+	return BAD_VALUE;
+    }
+    os << "IMSI "<< IMSI << " Kc is " << gTMSITable.getKc(IMSI) << endl;
+    return SUCCESS;
+}
+
 int testauth(int argc, char** argv, ostream& os, istream& is)
 {
     if (argc != 2 && argc != 3) return BAD_NUM_ARGS;
@@ -774,6 +786,7 @@ Parser::Parser()
 	addCommand("chans", chans, "-- report PHY status for active channels");
 	addCommand("power", power, "[minAtten maxAtten] -- report current attentuation or set min/max bounds");
 	addCommand("testauth", testauth, "<IMSI> [SRES] -- perform test authentication against for IMSI (using optional SRES) against backend");
+	addCommand("getkc", getkc, "<IMSI> -- obtain encryption key Kc if possible");
         addCommand("rxgain", rxgain, "[newRxgain] -- get/set the RX gain in dB");
         addCommand("noise", noise, "-- report receive noise level in RSSI dB");
 	addCommand("unconfig", unconfig, "key -- remove a config value");
