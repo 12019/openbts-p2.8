@@ -572,15 +572,17 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 	// Accept the burst into the deinterleaving buffer.
 	// Return true if we are ready to interleave.
 
+	FN = inBurst.time().FN();
+
 	// TODO -- One quick test of burst validity is to look at the tail bits.
 	// We could do that as a double-check against putting garbage into
 	// the interleaver or accepting bad parameters.
 
 	// The reverse index runs 0..3 as the bursts arrive.
 	// It is the "B" index of GSM 05.03 4.1.4 and 4.1.5.
-	int B = mMapping.reverseMapping(inBurst.time().FN()) % 4;
+	int B = mMapping.reverseMapping(FN) % 4;
 	// A negative value means that the demux is misconfigured.
-	assert(B>=0);
+	assert(B >= 0);
 
 	// Pull the data fields (e-bits) out of the burst and put them into i[B][].
 	// GSM 05.03 4.1.5
@@ -590,9 +592,9 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 
 */
 	// If the burst index is 0, save the time
-	if (B==0)
-		mReadTime = inBurst.time();
-    LOG(INFO) << "XCCHL1Decoder PROCESS BURST";
+	if (0 == B) mReadTime = inBurst.time();
+
+	LOG(INFO) << "XCCHL1Decoder PROCESS BURST";
 	inBurst.data1().copyToSegment(mE[B],0);
 	LOG(INFO) << "XCCHL1Decoder PROCESS BURST copytosegment data 1 done";
 	inBurst.data2().copyToSegment(mE[B],57);
@@ -600,7 +602,7 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 
 	// If the burst index is 3, then this is the last burst in the L2 frame.
 	// Return true to indicate that we are ready to deinterleave.
-	return B==3;
+	return 3 == B;
 
 	// TODO -- This is sub-optimal because it ignores the case
 	// where the B==3 burst is simply missing, even though the soft decoder
@@ -612,23 +614,21 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 
 void XCCHL1Decoder::decrypt()
 {
-
-for (int B=0; B<4; B++)
+    for (int B = 0; B < 4; B++)
+    {
+	if(channelType() == SDCCHType)
 	{
-	if(channelType()==SDCCHType)
-	{
-	LOG(INFO)<< "xCCH deCRYPT frmae number" << ((mCount.T1()<<11)|(mCount.T3()<<5)|mCount.T2());
+	    LOG(INFO)<< "xCCH deCRYPT frame number" << ((mCount.T1()<<11)|(mCount.T3()<<5)|mCount.T2());
 //	mI[B]=mE[B]^keyStreamUL;
-	mI[B]=mE[B];
-    LOG(INFO) <<"XCCHL1Decoder  Decrypt";
+	    mI[B] = mE[B];
+	    LOG(INFO) <<"XCCHL1Decoder  Decrypt";
 	}
 	else
 	{
-	mI[B]=mE[B];
-	LOG(INFO) <<"XCCHL1Decoder ELSE";
+	    mI[B] = mE[B];
+	    LOG(INFO) <<"XCCHL1Decoder ELSE";
 	}
-	}
-
+    }
 }
 
 void XCCHL1Decoder::deinterleave()
@@ -1221,18 +1221,20 @@ void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
 
 bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 {
-	// Accept the burst into the deinterleaving buffer.
-	// Return true if we are ready to interleave.
+    // Accept the burst into the deinterleaving buffer.
+    // Return true if we are ready to interleave.
 
-	// TODO -- One quick test of burst validity is to look at the tail bits.
-	// We could do that as a double-check against putting garbage into
-	// the interleaver or accepting bad parameters.
+    FN = inBurst.time().FN();
+
+    // TODO -- One quick test of burst validity is to look at the tail bits.
+    // We could do that as a double-check against putting garbage into
+    // the interleaver or accepting bad parameters.
 
 	// The reverse index runs 0..7 as the bursts arrive.
 	// It is the "B" index of GSM 05.03 3.1.3 and 3.1.4.
-	int B = mMapping.reverseMapping(inBurst.time().FN()) % 8;
+	int B = mMapping.reverseMapping(FN) % 8;
 	// A negative value means that the demux is misconfigured.
-	assert(B>=0);
+	assert(B >= 0);
 	OBJLOG(DEBUG) << "TCHFACCHL1Decoder B=" << B << " " << inBurst;
 
 	// Pull the data fields (e-bits) out of the burst and put them into i[B][].
@@ -1240,15 +1242,14 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 //	inBurst.data1().copyToSegment(mI[B],0);
 //	inBurst.data2().copyToSegment(mI[B],57);
 
-//////////////////////////////////////////////////////////////////////////////////
 	inBurst.data1().copyToSegment(mE[B],0);
-		LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT1";
+	LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT1";
 	inBurst.data2().copyToSegment(mE[B],57);
-		LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT2";
+	LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT2";
 
 	// Every 4th frame is the start of a new block.
 	// So if this isn't a "4th" frame, return now.
-	if (B%4!=3) return false;
+	if (B % 4 != 3) return false;
 
 	// Deinterleave according to the diagonal "phase" of B.
 	// See GSM 05.03 3.1.3.
@@ -1256,20 +1257,20 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 //	if (B==3) deinterleave(4);
 //	else deinterleave(0);
 	
-	if (B==3)
+	if (3 == B)
 	{
-	  LOG(INFO) <<"TCH PROCESS BURST ";
-	  decrypt();
-	  LOG(INFO) <<"TCH PROCESS BURST DECRYPTED";
-	  deinterleave(4);
-	  LOG(INFO) <<"TCH PROCESS BURST INTERLEAVED";
+	    LOG(INFO) <<"TCH PROCESS BURST ";
+	    decrypt();
+	    LOG(INFO) <<"TCH PROCESS BURST DECRYPTED";
+	    deinterleave(4);
+	    LOG(INFO) <<"TCH PROCESS BURST INTERLEAVED";
 	}
 	else
 	{
-	  decrypt();
-	  LOG(INFO) <<"TCH PROCESS BURST 1";
-	  deinterleave(0);
-	  LOG(INFO) <<"TCH PROCESS BURST 2";
+	    decrypt();
+	    LOG(INFO) <<"TCH PROCESS BURST 1";
+	    deinterleave(0);
+	    LOG(INFO) <<"TCH PROCESS BURST 2";
 	}
 
 	// See if this was the end of a stolen frame, GSM 05.03 4.2.5.
@@ -1291,11 +1292,11 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	// decodeTCH will handle the GSM 06.11 bad frmae processing.
 	bool traffic = decodeTCH(stolen);
 	if (traffic) {
-		OBJLOG(DEBUG) <<"TCHFACCHL1Decoder good TCH frame";
-		countGoodFrame();
-		// Don't let the channel timeout.
-		ScopedLock lock(mLock);
-		mT3109.set();
+	    OBJLOG(DEBUG) <<"TCHFACCHL1Decoder good TCH frame";
+	    countGoodFrame();
+	    // Don't let the channel timeout.
+	    ScopedLock lock(mLock);
+	    mT3109.set();
 	}
 	else countBadFrame();
 
@@ -1306,12 +1307,12 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 
 void TCHFACCHL1Decoder::decrypt()
 {
-for (int B = 0; B < 8; B++)
-	{
+    for (int B = 0; B < 8; B++)
+    {
 	//mI[B+blockOffset]=mE[B+blockOffset]^keyStreamUL;
 	mI[B] = mE[B];
 	LOG(INFO) <<"TCHFACCHL1Decoder  decrypt ";
-	}
+    }
 }
 
 void TCHFACCHL1Decoder::deinterleave(int blockOffset )
