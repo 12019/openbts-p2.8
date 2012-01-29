@@ -146,6 +146,7 @@ class L1Encoder {
 	//@{
 	unsigned TN() const { return mTN; }
 	unsigned TSC() const { return mTSC; }
+	uint32_t FN() const { return mNextWriteTime.FN(); }
 	unsigned ARFCN() const;
 	TypeAndOffset typeAndOffset() const;	///< this comes from mMapping
 	//@}
@@ -246,7 +247,7 @@ class L1Decoder {
 
 	/**@name Parameters fixed by the constructor, not requiring mutex protection. */
 	//@{
-	unsigned mTN;					///< timeslot number 
+	unsigned mTN;					///< timeslot number
 	const TDMAMapping& mMapping;	///< demux parameters
 	L1FEC* mParent;			///< a containing L1 processor, if any
 	//@}
@@ -526,6 +527,7 @@ class XCCHL1Decoder : public L1Decoder {
 	BitVector mP;				///< p[], as per GSM 05.03 2.2
 	BitVector mDP;				///< d[]:p[] (data & parity)
 	BitVector mD;				///< d[], as per GSM 05.03 2.2
+	uint32_t FN; // Frame Number - required for decryption
 	//@}
 
 	GSM::Time mReadTime;		///< timestamp of the first burst
@@ -554,7 +556,7 @@ class XCCHL1Decoder : public L1Decoder {
 	  @return true if a new frame is ready for deinterleaving.
 	*/
 	virtual bool processBurst(const RxBurst&);
-	
+
 	/* Decrypt
 	*/
 	virtual void decrypt();
@@ -571,7 +573,7 @@ class XCCHL1Decoder : public L1Decoder {
 	  @return True if frame passed parity check.
 	 */
 	bool decode();
-	
+
 	/** Finish off a properly-received L2Frame in mU and send it up to L2. */
 	virtual void handleGoodFrame();
 };
@@ -637,7 +639,7 @@ class SACCHL1Decoder : public XCCHL1Decoder {
 		Override processBurst to catch the physical parameters.
 	*/
 	bool processBurst(const RxBurst&);
-	
+
 	/** Set pyshical parameters for initialization. */
 	void setPhy(float wRSSI, float wTimingError);
 
@@ -799,7 +801,7 @@ private:
 	L2FrameFIFO mL2Q;				///< input queue for L2 FACCH frames
 
 	Thread mEncoderThread;
-	friend void TCHFACCHL1EncoderRoutine( TCHFACCHL1Encoder * encoder );	
+	friend void TCHFACCHL1EncoderRoutine( TCHFACCHL1Encoder * encoder );
 
 public:
 
@@ -855,7 +857,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 	SoftVector mClass1_c;				///< the class 1 part of c[]
 	BitVector mClass1A_d;				///< the class 1A part of d[]
 	SoftVector mClass2_c;				///< the class 2 part of c[]
-
+	uint32_t FN; // Frame Number - required for decryption
 	VocoderFrame mVFrame;				///< unpacking buffer for vocoder frame
 	unsigned char mPrevGoodFrame[33];	///< previous good frame.
 
@@ -866,9 +868,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 
 	public:
 
-	TCHFACCHL1Decoder(unsigned wTN, 
-			   const TDMAMapping& wMapping,
-			   L1FEC *wParent);
+	TCHFACCHL1Decoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC *wParent);
 
 	ChannelType channelType() const { return FACCHType; }
 
@@ -881,9 +881,10 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 		deinterleave, decode, handleGoodFrame.
 	*/
 	bool processBurst( const RxBurst& );
-	
-    /** Decrypt e[] to i[].  */
-    void decrypt();
+
+	/** Decrypt e[] to i[].  */
+	void decrypt();
+
 	/** Deinterleave i[] to c[].  */
 	void deinterleave(int blockOffset );
 
