@@ -418,11 +418,15 @@ void Parity::writeParityWord(const BitVector& data, BitVector& parityTarget, boo
 }
 
 
-
-
-
-
-
+bool SoftVector::xor_apply(uint8_t * gamma, size_t len)
+{
+    if (len != size()) return false;
+    for (size_t i = 0; i < size(); i++) {
+	if (gamma[i] != 0 || gamma[i] != 1) return false;
+	if (gamma[i]) mStart[i] = 1.0F - mStart[i]; // soft-bit inversion
+    }
+    return true;
+}
 
 
 SoftVector::SoftVector(const BitVector& source)

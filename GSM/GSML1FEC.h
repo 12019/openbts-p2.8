@@ -179,7 +179,7 @@ class L1Encoder {
 
 	// set Kc for ciphering
 	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); Kc_set = true; }
-	
+
 	// enable ciphering if Kc is set
 	bool enableCiphering() { if (Kc_set) cipherMode = true; else return false; }
 
@@ -444,7 +444,7 @@ class L1FEC {
 
 	L1Decoder* decoder() { return mDecoder; }
 	L1Encoder* encoder() { return mEncoder; }
-}; 
+};
 
 
 /**
@@ -560,6 +560,7 @@ class XCCHL1Decoder : public L1Decoder {
 	/* Decrypt
 	*/
 	virtual void decrypt();
+
 	/**
 	  Deinterleave the i[] to c[].
 	  This virtual method works for all block-interleaved channels (xCCHs).
@@ -743,7 +744,6 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 //	friend void SDCCHL1EncoderRoutine( SDCCHL1Encoder * encoder );
 	public:
 
-	
 	SDCCHL1Encoder(
 		unsigned wTN,
 		const TDMAMapping& wMapping,
