@@ -23,8 +23,10 @@
 
 */
 
-
-
+extern "C" {
+#include <osmocom/core/utils.h>
+#include <osmocom/gsm/a5.h>
+}
 #include "GSML1FEC.h"
 #include "GSMCommon.h"
 #include "GSMSAPMux.h"
@@ -616,17 +618,17 @@ void XCCHL1Decoder::decrypt()
 {
     for (int B = 0; B < 4; B++)
     {
+	mI[B] = mE[B];
 	if(channelType() == SDCCHType)
 	{
-	    LOG(INFO)<< "xCCH deCRYPT frame number" << ((mCount.T1()<<11)|(mCount.T3()<<5)|mCount.T2());
-//	mI[B]=mE[B]^keyStreamUL;
-	    mI[B] = mE[B];
-	    LOG(INFO) <<"XCCHL1Decoder  Decrypt";
-	}
-	else
-	{
-	    mI[B] = mE[B];
-	    LOG(INFO) <<"XCCHL1Decoder ELSE";
+	    LOG(INFO)<< "XCCHL1Decoder decrypt frame number " << FN;
+	
+	    if(true == cipherMode) {
+		ubit_t gamma[114];
+		osmo_a5(1, Kc, FN, NULL, gamma); // cipherstream for uplink
+		mI[B].xor_apply(gamma, 114);
+	    }
+	    LOG(INFO) <<"XCCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
 	}
     }
 }
@@ -969,14 +971,18 @@ void SDCCHL1Encoder::open()
 
 void SDCCHL1Encoder::encrypt()
 {
-
-for (int B=0; B<4; B++)
-	{
-//		mE[B]=mI[B]^keyStreamDL;
-        mE[B]=mI[B];
-        LOG(INFO) <<"SDCCHL1Encoder  ENCRYPT";
+    for (int B = 0; B < 4; B++)
+    {
+	mI[B] = mE[B];
+	if(true == cipherMode) {
+	    ubit_t gamma[114];
+//	    osmo_a5(1, Kc, FN, gamma, NULL); // cipherstream for downlink
+//	    mI[B].xor_apply(gamma, 114);
 	}
+	LOG(INFO) << "SDCCHL1Encoder encrypt: "<< mI[B] << " <-" << mE[B];
+    }
 }
+
 void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 {
 	OBJLOG(DEBUG) << "SDCCHL1Encoder " << frame;
@@ -1309,9 +1315,13 @@ void TCHFACCHL1Decoder::decrypt()
 {
     for (int B = 0; B < 8; B++)
     {
-	//mI[B+blockOffset]=mE[B+blockOffset]^keyStreamUL;
 	mI[B] = mE[B];
-	LOG(INFO) <<"TCHFACCHL1Decoder  decrypt ";
+	if(true == cipherMode) {
+	    ubit_t gamma[114];
+	    osmo_a5(1, Kc, FN, NULL, gamma); // cipherstream for uplink
+	    mI[B].xor_apply(gamma, 114);
+	}
+	LOG(INFO) <<"TCHFACCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
     }
 }
 

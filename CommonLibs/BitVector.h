@@ -145,7 +145,7 @@ class ViterbiR2O4 {
 		uint32_t mStateTable[mIRate][2*mIStates];	///< precomputed generator output tables
 		uint32_t mGeneratorTable[2*mIStates];		///< precomputed coder output table
 		//@}
-	
+
 	public:
 
 		/**
@@ -165,7 +165,6 @@ class ViterbiR2O4 {
 			v.oState=0;
 			v.cost=0;
 		}
-		
 
 	private:
 
@@ -181,7 +180,6 @@ class ViterbiR2O4 {
 		uint32_t cMask() const { return mCMask; }
 		uint32_t stateTable(unsigned g, unsigned i) const { return mStateTable[g][i]; }
 		unsigned deferral() const { return mDeferral; }
-		
 
 		ViterbiR2O4();
 
@@ -376,15 +374,13 @@ class SoftVector: public Vector<float> {
 
 	SoftVector(float* wData, float* wStart, float* wEnd)
 		:Vector<float>(wData,wStart,wEnd)
-	{ }
+	{}
 
 	/**
 		Casting from a Vector<float>.
 		Note that this is NOT pass-by-reference.
 	*/
-	SoftVector(Vector<float> source)
-		:Vector<float>(source)
-	{}
+	SoftVector(Vector<float> source):Vector<float>(source) {}
 
 
 	/**@name Casts and overrides of Vector operators. */
@@ -408,6 +404,11 @@ class SoftVector: public Vector<float> {
 	SoftVector tail(size_t start) { return segment(start,size()-start); }
 	const SoftVector tail(size_t start) const { return segment(start,size()-start); }
 	//@}
+
+	// apply gamma bit sequence (1 bit per byte) using xor function:
+	// 1.0-x is the inverse of x soft-bit
+	// return false on non-boolean gamma or length mismatch
+	bool xor_apply(uint8_t * gamma, size_t len);
 
 	/** Decode soft symbols with the GSM rate-1/2 Viterbi decoder. */
 	void decode(ViterbiR2O4 &decoder, BitVector& target) const;
