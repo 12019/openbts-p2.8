@@ -861,6 +861,7 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	encode();			// Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
+	encrypt();
 	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
 }
 
@@ -911,9 +912,9 @@ void XCCHL1Encoder::transmit()
 	for (int B=0; B<4; B++) {
 		mBurst.time(mNextWriteTime);
 		// Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-		OBJLOG(DEBUG) << "XCCHL1Encoder mI["<<B<<"]=" << mI[B];
-		mI[B].segment(0,57).copyToSegment(mBurst,3);
-		mI[B].segment(57,57).copyToSegment(mBurst,88);
+		OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
+		mE[B].segment(0,57).copyToSegment(mBurst,3);
+		mE[B].segment(57,57).copyToSegment(mBurst,88);
 		// Send it to the radio.
 		OBJLOG(DEBUG) << "XCCHL1Encoder mBurst=" << mBurst;
 		mDownstream->writeHighSide(mBurst);
@@ -952,34 +953,17 @@ SDCCHL1Encoder::SDCCHL1Encoder(
 }
 
 
-/*
-void SDCCHL1Encoder::start()
-{
-	L1Encoder::start();
-	LOG(INFO) <<"SDCCHL1Encoder";
-	//mEncoderThread.start((void*(*)(void*))SDCCHL1EncoderRoutine,(void*)this);
-}
-*/
-/*
-void SDCCHL1Encoder::open()
-{
-	// There was over stuff here at one time to justify overriding the default.
-	// But it's gone now.
-	XCCHL1Encoder::open();
-}
-*/
-
-void SDCCHL1Encoder::encrypt()
+void XCCHL1Encoder::encrypt()
 {
     for (int B = 0; B < 4; B++)
     {
-	mI[B] = mE[B];
+	mE[B] = mI[B];
 	if(true == cipherMode) {
 	    ubit_t gamma[114];
-//	    osmo_a5(1, Kc, FN, gamma, NULL); // cipherstream for downlink
-//	    mI[B].xor_apply(gamma, 114);
+	    osmo_a5(1, Kc, FN(), gamma, NULL); // cipherstream for downlink
+	    mE[B].xor_apply(gamma, 114);
 	}
-	LOG(INFO) << "SDCCHL1Encoder encrypt: "<< mI[B] << " <-" << mE[B];
+	LOG(INFO) << "XCCHL1Encoder encrypt: "<< mI[B] << " -> " << mE[B];
     }
 }
 
@@ -1006,8 +990,6 @@ void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 	LOG(INFO) << "SDCCHL1ENCODER ENCODED";
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
 	LOG(INFO) << "SDCCHL1ENCODER INTERLEAVED";
-	encrypt();			// Encrypt i[][] to e[].
-	LOG(INFO) << "SDCCHL1ENCODER ENCRYPTED";
 	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
 	LOG(INFO) << "SDCCHL1ENCODER TRANSMITTED";
 	// FIXME: is this FN OK, or do we need to back it up by 4?
@@ -1579,9 +1561,6 @@ void TCHFACCHL1Encoder::dispatch()
 	// Interleave c[] to i[].
 	interleave(mOffset);
 
-	LOG(INFO)<<"TCH START ENCRYPT";
-	encrypt();
-	LOG(INFO)<<"TCH START ENCRYPTed";
 	// "mapping on a burst"
 	// Map c[] into outgoing normal bursts, marking stealing flags as needed.
 	// GMS 05.03 3.1.4.
@@ -1637,24 +1616,11 @@ void TCHFACCHL1Encoder::interleave(int blockOffset)
 }
 
 
-void TCHFACCHL1Encoder::encrypt()
-{
-
-for (int B=0; B<8; B++)
-	{
-		//mE[B+blockOffset]=mI[B+blockOffset]^keyStreamDL;
-		mE[B]=mI[B];
-		LOG(INFO) <<"TCHFACCHL1Encoder  encrypt";
-	}
-}
-
-
 bool TCHFACCHL1Decoder::uplinkLost() const
 {
 	ScopedLock lock(mLock);
 	return mT3109.expired();
 }
-
 
 
 void SACCHL1FEC::setPhy(const SACCHL1FEC& other)

@@ -683,6 +683,7 @@ class XCCHL1Encoder : public L1Encoder {
 	//@{
 	Parity mBlockCoder;			///< block coder for this channel
 	BitVector mI[4];			///< i[][], as per GSM 05.03 2.2
+	BitVector mE[4];			///< e[][], as per GSM 05.03 2.2
 	BitVector mC;				///< c[], as per GSM 05.03 2.2
 	BitVector mU;				///< u[], as per GSM 05.03 2.2
 	BitVector mD;				///< d[], as per GSM 05.03 2.2
@@ -713,6 +714,8 @@ class XCCHL1Encoder : public L1Encoder {
 	*/
 	void encode();
 
+	void encrypt();
+
 	/**
 	  Interleave c[] to i[].
 	  GSM 05.03 4.1.4.
@@ -736,9 +739,6 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 
 	/**@name FEC signal processing state.  */
 	//@{
-	BitVector mE[4];			///< e[][], as per GSM 05.03 2.2
-
-
 	//@}
 //	Thread mEncoderThread;
 //	friend void SDCCHL1EncoderRoutine( SDCCHL1Encoder * encoder );
@@ -748,8 +748,6 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 		unsigned wTN,
 		const TDMAMapping& wMapping,
 		L1FEC* wParent);
-
-	 void encrypt();
 
 	/** Extend open() to set up semaphores. */
 //	void open();
@@ -784,7 +782,6 @@ private:
 	bool mPreviousFACCH;	///< A copy of the previous stealing flag state.
 	size_t mOffset;			///< Current deinterleaving offset.
 
-    BitVector mE[8];			///< encrypting, 8 blocks instead of 4
 	BitVector mI[8];			///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;				///< u[], but for traffic
 	BitVector mTCHD;				///< d[], but for traffic
@@ -818,8 +815,6 @@ public:
 
 protected:
 
-    /** Interleave i[] to e[].  GSM 05.03 4.1.4. */
-	virtual void encrypt();
 	/** Interleave c[] to i[].  GSM 05.03 4.1.4. */
 	virtual void interleave(int blockOffset);
 
