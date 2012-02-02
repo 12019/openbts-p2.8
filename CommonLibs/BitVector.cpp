@@ -417,6 +417,15 @@ void Parity::writeParityWord(const BitVector& data, BitVector& parityTarget, boo
 	parityTarget.fillField(0,pWord,size());
 }
 
+bool BitVector::xor_apply(uint8_t * gamma, size_t len)
+{
+    if (len != size()) return false;
+    for (size_t i = 0; i < size(); i++) {
+	if (gamma[i] != 0 || gamma[i] != 1) return false;
+	mStart[i] ^= gamma[i];
+    }
+    return true;
+}
 
 bool SoftVector::xor_apply(uint8_t * gamma, size_t len)
 {

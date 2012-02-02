@@ -294,6 +294,10 @@ class BitVector : public Vector<char> {
 	/** Invert 0<->1. */
 	void invert();
 
+	// apply gamma bit sequence (1 bit per byte) using xor function:
+	// return false on non-boolean gamma or length mismatch
+	bool xor_apply(uint8_t * gamma, size_t len);
+
 	/**@name Byte-wise operations. */
 	//@{
 	/** Reverse an 8-bit vector. */
