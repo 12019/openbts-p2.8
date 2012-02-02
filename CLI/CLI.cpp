@@ -709,7 +709,7 @@ int getkc(int argc, char** argv, ostream& os, istream& is)
 	os << IMSI << " is not a valid IMSI" << endl;
 	return BAD_VALUE;
     }
-    os << "IMSI "<< IMSI << " Kc is " << gTMSITable.getKc(IMSI) << endl;
+    os << "IMSI "<< IMSI << " Kc number " << gTMSITable.get_cksn(IMSI) << " is " << gTMSITable.getKc(IMSI) << endl;
     return SUCCESS;
 }
 
@@ -786,7 +786,7 @@ Parser::Parser()
 	addCommand("chans", chans, "-- report PHY status for active channels");
 	addCommand("power", power, "[minAtten maxAtten] -- report current attentuation or set min/max bounds");
 	addCommand("testauth", testauth, "<IMSI> [SRES] -- perform test authentication against for IMSI (using optional SRES) against backend");
-	addCommand("getkc", getkc, "<IMSI> -- obtain encryption key Kc if possible");
+	addCommand("getkc", getkc, "<IMSI> -- obtain encryption key Kc and its sequence number if possible");
         addCommand("rxgain", rxgain, "[newRxgain] -- get/set the RX gain in dB");
         addCommand("noise", noise, "-- report receive noise level in RSSI dB");
 	addCommand("unconfig", unconfig, "key -- remove a config value");

@@ -218,7 +218,7 @@ string randy401(osip_message_t *msg)
 	return rands;
 }
 
-bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
+bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, string *CKSN, const char *IMSI, const char *SRES)
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
@@ -270,8 +270,8 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 		assert(msg);
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
-		// specific status
-		if (status == 200) {
+
+		if (status == 200) { // extrat Kc and CKSN from response
 		    LOG(INFO) << "REGISTER success";
 		    success = true;
 		    osip_authentication_info_t * auth_info;
@@ -279,10 +279,13 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *
 		    if (NULL == auth_info) break;
 		    char * qop = osip_authentication_info_get_qop_options(auth_info);
 		    char * key = osip_authentication_info_get_rspauth(auth_info);
-		    LOG(INFO) << "found " << qop << " in response: " << key;
+		    char * cksn = osip_authentication_info_get_cnonce(auth_info);
+		    LOG(INFO) << "found " << qop << " number " << cksn << " in response: " << key;
 		    *Kc = string(key + 1, 16);
+		    *CKSN = string(cksn);
 		    break;
 		}
+
 		if (status == 401) {
 		    string wRAND = randy401(msg);
 		    // if rand is included on 401 unauthorized, then the challenge-response game is afoot
