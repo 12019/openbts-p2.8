@@ -203,9 +203,7 @@ L1Encoder::L1Encoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC *wParent)
 	ostringstream ss;
 	ss << wMapping.typeAndOffset();
 	sprintf(mDescriptiveString,"C0T%d %s", wTN, ss.str().c_str());
-
-	Kc_set = false;
-	cipherMode = false;
+	cipherID = 0;
 }
 
 
@@ -623,9 +621,9 @@ void XCCHL1Decoder::decrypt()
 	{
 	    LOG(INFO)<< "XCCHL1Decoder decrypt frame number " << FN;
 	
-	    if(true == cipherMode) {
+	    if(cipherID) {
 		ubit_t gamma[114];
-		osmo_a5(1, Kc, FN, NULL, gamma); // cipherstream for uplink
+		osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
 		mI[B].xor_apply(gamma, 114);
 	    }
 	    LOG(INFO) <<"XCCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
@@ -839,7 +837,7 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 {
 	OBJLOG(DEBUG) << "XCCHL1Encoder " << frame;
 	// Make sure there's something down there to take the busts.
-	if (mDownstream==NULL) {
+	if (mDownstream == NULL) {
 		LOG(WARNING) << "XCCHL1Encoder with no downstream";
 		return;
 	}
@@ -849,20 +847,19 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 	// Copy the L2 frame into u[] for processing.
 	// GSM 05.03 4.1.1.
 	//assert(mD.size()==headerOffset()+frame.size());
-	frame.copyToSegment(mU,headerOffset());
+	frame.copyToSegment(mU, headerOffset());
 
 	// Send to GSMTAP (must send mU = real bits !)
-	gWriteGSMTAP(ARFCN(),TN(),mNextWriteTime.FN(),
-	             typeAndOffset(),mMapping.repeatLength()>51,false,mU);
+	gWriteGSMTAP(ARFCN(), TN(), mNextWriteTime.FN(), typeAndOffset(), mMapping.repeatLength() > 51, false, mU);
 
 	// Encode data into bursts
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	mD.LSB8MSB();
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
-	encode();			// Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
+	encode();		 // Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
 	encrypt();
-	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
+	transmit();	      // Send the bursts to the radio, GSM 05.03 4.1.5.
 }
 
 
@@ -958,9 +955,9 @@ void XCCHL1Encoder::encrypt()
     for (int B = 0; B < 4; B++)
     {
 	mE[B] = mI[B];
-	if(true == cipherMode) {
+	if(cipherID) {
 	    ubit_t gamma[114];
-	    osmo_a5(1, Kc, FN(), gamma, NULL); // cipherstream for downlink
+	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
 	}
 	LOG(INFO) << "XCCHL1Encoder encrypt: "<< mI[B] << " -> " << mE[B];
@@ -1298,9 +1295,9 @@ void TCHFACCHL1Decoder::decrypt()
     for (int B = 0; B < 8; B++)
     {
 	mI[B] = mE[B];
-	if(true == cipherMode) {
+	if(cipherID) {
 	    ubit_t gamma[114];
-	    osmo_a5(1, Kc, FN, NULL, gamma); // cipherstream for uplink
+	    osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
 	    mI[B].xor_apply(gamma, 114);
 	}
 	LOG(INFO) <<"TCHFACCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];

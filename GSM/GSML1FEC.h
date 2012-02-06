@@ -90,8 +90,7 @@ class L1Encoder {
 	TxBurst mBurst;					///< a preformatted burst template
 	TxBurst mFillerBurst;			///< the filler burst for this channel
 	uint8_t Kc[8];
-	bool Kc_set;
-	bool cipherMode;
+	unsigned cipherID;
 
 	/**@name Config items that don't change. */
 	//@{
@@ -178,10 +177,10 @@ class L1Encoder {
 	const char* descriptiveString() const { return mDescriptiveString; }
 
 	// set Kc for ciphering
-	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); Kc_set = true; }
+	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); }
 
 	// enable ciphering if Kc is set
-	bool enableCiphering() { if (Kc_set) cipherMode = true; else return false; }
+	void enableEnciphering(unsigned i) { cipherID = i; }
 
 	protected:
 
@@ -221,8 +220,7 @@ class L1Decoder {
 
 	SAPMux * mUpstream;
 	uint8_t Kc[8];
-	bool Kc_set;
-	bool cipherMode;
+	unsigned cipherID; // algorithm to be used  for encryption: 0 - none, 1 - A5/1, 3 - A5/3 etc
 
 	/**@name Mutex-controlled state information. */
 	//@{
@@ -271,12 +269,11 @@ class L1Decoder {
 			mFER(0.0F),
 			mTN(wTN),
 			mMapping(wMapping),mParent(wParent)
-	{
-		// Start T3101 so that the channel will
-		// become recyclable soon.
-		mT3101.set();
-		Kc_set = false;
-		cipherMode = false;
+	{    // Start T3101 so that the channel will
+	    // become recyclable soon.
+	    mT3101.set();
+	    memset(Kc, 0, 8);
+	    cipherID = 0 ;
 	}
 
 
@@ -323,17 +320,17 @@ class L1Decoder {
 	/**@name Components of the channel description. */
 	//@{
 	unsigned TN() const { return mTN; }
-	unsigned ARFCN() const;					///< this comes from mUpstream
+	unsigned ARFCN() const;			 ///< this comes from mUpstream
 	TypeAndOffset typeAndOffset() const;	///< this comes from mMapping
 	//@}
 
 	// set Kc for deciphering
-	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); Kc_set = true; }
+	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); }
 
 	// enable deciphering if Kc is set
-	bool enableDeciphering() { if (Kc_set) cipherMode = true; else return false; }
+	void enableDeciphering(unsigned i) { cipherID = i; }
 
-	protected:
+protected:
 
 	virtual L1FEC* parent() { return mParent; }
 
@@ -344,7 +341,7 @@ class L1Decoder {
 	virtual const L1Encoder* sibling() const;
 
 	/** Mark the decoder as started.  */
-	virtual void start() { mRunning=true; }
+	virtual void start() { mRunning = true; }
 
 	void countGoodFrame();
 
@@ -371,7 +368,7 @@ class L1FEC {
 		The L1FEC constructor is over-ridden for different channel types.
 		But the default has no encoder or decoder.
 	*/
-	L1FEC():mEncoder(NULL),mDecoder(NULL) {}
+	L1FEC():mEncoder(NULL), mDecoder(NULL) {}
 
 	/** This is no-op because these channels should not be destroyed. */
 	virtual ~L1FEC() {};
@@ -429,16 +426,14 @@ class L1FEC {
 	const char* descriptiveString() const
 		{ assert(mEncoder); return mEncoder->descriptiveString(); }
 
-	void setKc(uint8_t *Kc)
-	    {
-			assert(mEncoder); mEncoder->setKc(Kc);
-			assert(mDecoder); mDecoder->setKc(Kc);
-	    }
+	void setKc(uint8_t *Kc) {
+	    assert(mEncoder); mEncoder->setKc(Kc);
+	    assert(mDecoder); mDecoder->setKc(Kc);
+	}
 
-	bool enableCiphering() { assert(mEncoder); return mEncoder->enableCiphering(); }
-
-	bool enableDeciphering() { assert(mDecoder); return mDecoder->enableDeciphering(); }
-
+	void activateEncryption(unsigned i) { assert(mEncoder); mEncoder->enableEnciphering(i); }
+	void activateDecryption(unsigned i) { assert(mDecoder); mDecoder->enableDeciphering(i); }
+	
 	//@}
 
 
@@ -692,10 +687,7 @@ class XCCHL1Encoder : public L1Encoder {
 
 	public:
 
-	XCCHL1Encoder(
-		unsigned wTN,
-		const TDMAMapping& wMapping,
-		L1FEC* wParent);
+	XCCHL1Encoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC* wParent);
 
 	protected:
 

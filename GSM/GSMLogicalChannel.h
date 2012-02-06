@@ -76,9 +76,9 @@ protected:
 
 	/**@name Contained layer processors. */
 	//@{
-	L1FEC *mL1;			///< L1 forward error correction
+	L1FEC *mL1;		 ///< L1 forward error correction
 	SAPMux mMux;		///< service access point multiplex
-	L2DL *mL2[4];		///< data link layer state machines, one per SAP
+	L2DL *mL2[4];	       ///< data link layer state machines, one per SAP
 	//@}
 
 	SACCHLogicalChannel *mSACCH;	///< The associated SACCH, if any.
@@ -206,6 +206,14 @@ public:
 
 	// set Kc for L1 encoder
 	bool setKc(const char * key);
+
+	void activateEncryption(unsigned i = 1) { // use A5/1 by default
+	    assert(mL1); mL1->activateEncryption(i); 
+	}
+
+	void activateDecryption(unsigned i = 1) { // use A5/1 by default
+	    assert(mL1); mL1->activateDecryption(i); 
+	}
 
 	/** The TDMA parameters for the transmit side. */
 	const TDMAMapping& txMapping() const { assert(mL1); return mL1->txMapping(); }
