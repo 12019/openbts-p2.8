@@ -757,20 +757,16 @@ void SACCHL1Decoder::handleGoodFrame()
 
 
 
-
-
-
 XCCHL1Encoder::XCCHL1Encoder(
 		unsigned wTN,
 		const TDMAMapping& wMapping,
 		L1FEC* wParent)
 	:L1Encoder(wTN,wMapping,wParent),
 	mBlockCoder(0x10004820009ULL, 40, 224),
-	mC(456), mU(228),
-	mD(mU.head(184)),mP(mU.segment(184,40))
+	mC(456), mU(228), mD(mU.head(184)),mP(mU.segment(184, 40))
 {
 	// Set up the interleaving buffers.
-	for(int k = 0; k<4; k++) {
+	for(int k = 0; k < 4; k++) {
 		mI[k] = BitVector(114);
 		// Fill with zeros just to make Valgrind happy.
 		mI[k].fill(0);
@@ -785,7 +781,7 @@ XCCHL1Encoder::XCCHL1Encoder(
 	mBurst.Hl(1);
 	mBurst.Hu(1);
 	// training sequence, GSM 05.02 5.2.3
-	gTrainingSequence[mTSC].copyToSegment(mBurst,61);
+	gTrainingSequence[mTSC].copyToSegment(mBurst, 61);
 
 	// zero out u[] to take care of tail fields
 	mU.zero();
@@ -870,11 +866,11 @@ void XCCHL1Encoder::encode()
 
 	// GSM 05.03 4.1.2
 	// Generate the parity bits.
-	mBlockCoder.writeParityWord(mD,mP);
+	mBlockCoder.writeParityWord(mD, mP);
 	OBJLOG(DEBUG) << "XCCHL1Encoder u[]=" << mU;
 	// GSM 05.03 4.1.3
 	// Apply the convolutional encoder.
-	mU.encode(mVCoder,mC);
+	mU.encode(mVCoder, mC);
 	OBJLOG(DEBUG) << "XCCHL1Encoder c[]=" << mC;
 }
 
@@ -883,9 +879,9 @@ void XCCHL1Encoder::encode()
 void XCCHL1Encoder::interleave()
 {
 	// GSM 05.03, 4.1.4.  Verbatim.
-	for (int k=0; k<456; k++) {
-		int B = k%4;
-		int j = 2*((49*k) % 57) + ((k%8)/4);
+	for (int k = 0; k < 456; k++) {
+		int B = k % 4;
+		int j = 2 * ((49 * k) % 57) + ((k % 8) / 4);
 		mI[B][j] = mC[k];
 	}
 }
@@ -906,16 +902,16 @@ void XCCHL1Encoder::transmit()
 		return;
 	}
 
-	for (int B=0; B<4; B++) {
-		mBurst.time(mNextWriteTime);
-		// Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-		OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
-		mE[B].segment(0,57).copyToSegment(mBurst,3);
-		mE[B].segment(57,57).copyToSegment(mBurst,88);
-		// Send it to the radio.
-		OBJLOG(DEBUG) << "XCCHL1Encoder mBurst=" << mBurst;
-		mDownstream->writeHighSide(mBurst);
-		rollForward();
+	for (int B = 0; B < 4; B++) {
+	    mBurst.time(mNextWriteTime);
+	    // Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
+	    OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
+	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
+	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);
+	    // Send it to the radio.
+	    OBJLOG(DEBUG) << "XCCHL1Encoder mBurst=" << mBurst;
+	    mDownstream->writeHighSide(mBurst);
+	    rollForward();
 	}
 }
 
@@ -943,7 +939,7 @@ SDCCHL1Encoder::SDCCHL1Encoder(
 	mBurst.Hl(1);
 	mBurst.Hu(1);
 	// training sequence, GSM 05.02 5.2.3
-	gTrainingSequence[mTSC].copyToSegment(mBurst,61);
+	gTrainingSequence[mTSC].copyToSegment(mBurst, 61);
 
 	// zero out u[] to take care of tail fields
 	mU.zero();
@@ -992,6 +988,7 @@ void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 	// FIXME: is this FN OK, or do we need to back it up by 4?
 	//gWriteGSMTAP(ARFCN(),mTN,mPrevWriteTime.FN(),frame);
 }
+
 void SDCCHL1Encoder::transmit()
 {
 	// Format the bits into the bursts.
@@ -1006,19 +1003,19 @@ void SDCCHL1Encoder::transmit()
 		return;
 	}
 
-for (int B = 0; B < 4; B++) {
-		mBurst.time(mNextWriteTime);
-		// Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-		OBJLOG(DEBUG) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
-		LOG(INFO) <<"SDCCHL1Encoder  TRANSMIT";
-		LOG(INFO) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
-		mE[B].segment(0,57).copyToSegment(mBurst,3);
-		mE[B].segment(57,57).copyToSegment(mBurst,88);
-		// Send it to the radio.
-		OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
-		LOG(INFO) << "SDCCHL1Encoder mBurst=" << mBurst;
-		mDownstream->writeHighSide(mBurst);
-		rollForward();
+	for (int B = 0; B < 4; B++) {
+	    mBurst.time(mNextWriteTime);
+	    // Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
+	    OBJLOG(DEBUG) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
+	    LOG(INFO) <<"SDCCHL1Encoder  TRANSMIT";
+	    LOG(INFO) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
+	    mE[B].segment(0,57).copyToSegment(mBurst,3);
+	    mE[B].segment(57,57).copyToSegment(mBurst,88);
+	    // Send it to the radio.
+	    OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
+	    LOG(INFO) << "SDCCHL1Encoder mBurst=" << mBurst;
+	    mDownstream->writeHighSide(mBurst);
+	    rollForward();
 	}
 }
 

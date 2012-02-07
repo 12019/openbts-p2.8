@@ -530,8 +530,7 @@ class XCCHL1Decoder : public L1Decoder {
 
 	public:
 
-	XCCHL1Decoder(unsigned wTN, const TDMAMapping& wMapping,
-		L1FEC *wParent);
+	XCCHL1Decoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC *wParent);
 
 	protected:
 

@@ -186,15 +186,15 @@ template <class T> class Vector {
 	void copyToSegment(Vector<T>& other, size_t start, size_t span) const
 	{
 		T* base = other.mStart + start;
-		assert(base+span<=other.mEnd);
-		assert(mStart+span<=mEnd);
-		memcpy(base,mStart,span*sizeof(T));
+		assert(base + span <= other.mEnd);
+		assert(mStart + span <= mEnd);
+		memcpy(base, mStart, span * sizeof(T));
 	}
 
 	/** Copy all of this Vector to a segment of another Vector. */
-	void copyToSegment(Vector<T>& other, size_t start=0) const { copyToSegment(other,start,size()); }
+	void copyToSegment(Vector<T>& other, size_t start = 0) const { copyToSegment(other, start, size()); }
 
-	void copyTo(Vector<T>& other) const { copyToSegment(other,0,size()); }
+	void copyTo(Vector<T>& other) const { copyToSegment(other, 0, size()); }
 
 	/**
 		Copy a segment of this vector into another.
@@ -205,9 +205,9 @@ template <class T> class Vector {
 	void segmentCopyTo(Vector<T>& other, size_t start, size_t span) const
 	{
 		const T* base = mStart + start;
-		assert(base+span<=mEnd);
-		assert(other.mStart+span<=other.mEnd);
-		memcpy(other.mStart,base,span*sizeof(T));
+		assert(base + span <= mEnd);
+		assert(other.mStart + span <= other.mEnd);
+		memcpy(other.mStart, base, span * sizeof(T));
 	}
 
 	void fill(const T& val)
