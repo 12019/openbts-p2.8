@@ -955,8 +955,8 @@ void XCCHL1Encoder::encrypt()
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
+	    LOG(INFO) << "XCCHL1Encoder " << cipherID << " encrypt: " << mI[B] << " -> " << mE[B];
 	}
-	LOG(INFO) << "XCCHL1Encoder encrypt: "<< mI[B] << " -> " << mE[B];
     }
 }
 
@@ -964,7 +964,7 @@ void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 {
 	OBJLOG(DEBUG) << "SDCCHL1Encoder " << frame;
 	// Make sure there's something down there to take the busts.
-	LOG(INFO) << "SDCCHL1Encoder  SENDFRAME";
+	LOG(DEBUG) << "SDCCHL1Encoder  SENDFRAME";
 	if (mDownstream == NULL) {
 		LOG(INFO) << "SDCCHL1Encoder with no downstream";
 		return;
@@ -975,16 +975,16 @@ void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 	// Copy the L2 frame into u[] for processing.
 	// GSM 05.03 4.1.1.
 	//assert(mD.size()==headerOffset()+frame.size());
-	frame.copyToSegment(mU,headerOffset());
+	frame.copyToSegment(mU, headerOffset());
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	mD.LSB8MSB();
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	encode();			// Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
-	LOG(INFO) << "SDCCHL1ENCODER ENCODED";
+	LOG(DEBUG) << "SDCCHL1ENCODER ENCODED";
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
-	LOG(INFO) << "SDCCHL1ENCODER INTERLEAVED";
+	LOG(DEBUG) << "SDCCHL1ENCODER INTERLEAVED";
 	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
-	LOG(INFO) << "SDCCHL1ENCODER TRANSMITTED";
+	LOG(DEBUG) << "SDCCHL1ENCODER TRANSMITTED";
 	// FIXME: is this FN OK, or do we need to back it up by 4?
 	//gWriteGSMTAP(ARFCN(),mTN,mPrevWriteTime.FN(),frame);
 }
@@ -1006,14 +1006,13 @@ void SDCCHL1Encoder::transmit()
 	for (int B = 0; B < 4; B++) {
 	    mBurst.time(mNextWriteTime);
 	    // Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-	    OBJLOG(DEBUG) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
-	    LOG(INFO) <<"SDCCHL1Encoder  TRANSMIT";
-	    LOG(INFO) << "SDCCHL1Encoder mE["<<B<<"]=" << mE[B];
-	    mE[B].segment(0,57).copyToSegment(mBurst,3);
-	    mE[B].segment(57,57).copyToSegment(mBurst,88);
+	    OBJLOG(DEBUG) << "SDCCHL1Encoder mE[" << B << "]=" << mE[B];	  
+	    LOG(DEBUG) << "SDCCHL1Encoder mE[" << B << "]=" << mE[B];
+	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
+	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);
 	    // Send it to the radio.
 	    OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
-	    LOG(INFO) << "SDCCHL1Encoder mBurst=" << mBurst;
+	    LOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
 	    mDownstream->writeHighSide(mBurst);
 	    rollForward();
 	}
@@ -1184,10 +1183,7 @@ TCHFACCHL1Decoder::TCHFACCHL1Decoder(
 }
 
 
-
-
-void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
-{
+void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst) {
 	OBJLOG(DEBUG) << "TCHFACCHL1Decoder " << inBurst;
 	// If the channel is closed, ignore the burst.
 	if (!active()) {
@@ -1199,10 +1195,7 @@ void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
 
 
 
-
-
-bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
-{
+bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst) {
     // Accept the burst into the deinterleaving buffer.
     // Return true if we are ready to interleave.
 
@@ -1225,9 +1218,9 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 //	inBurst.data2().copyToSegment(mI[B],57);
 
 	inBurst.data1().copyToSegment(mE[B],0);
-	LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT1";
+	LOG(DEBUG) << "TCH PROCESS BURST COPYTOSEGMENT1";
 	inBurst.data2().copyToSegment(mE[B],57);
-	LOG(INFO) <<"TCH PROCESS BURST COPYTOSEGMENT2";
+	LOG(DEBUG) << "TCH PROCESS BURST COPYTOSEGMENT2";
 
 	// Every 4th frame is the start of a new block.
 	// So if this isn't a "4th" frame, return now.
@@ -1241,18 +1234,18 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	
 	if (3 == B)
 	{
-	    LOG(INFO) <<"TCH PROCESS BURST ";
+	    LOG(DEBUG) << "TCH PROCESS BURST ";
 	    decrypt();
-	    LOG(INFO) <<"TCH PROCESS BURST DECRYPTED";
+	    LOG(DEBUG) << "TCH PROCESS BURST DECRYPTED";
 	    deinterleave(4);
-	    LOG(INFO) <<"TCH PROCESS BURST INTERLEAVED";
+	    LOG(DEBUG) <<" TCH PROCESS BURST INTERLEAVED";
 	}
 	else
 	{
 	    decrypt();
-	    LOG(INFO) <<"TCH PROCESS BURST 1";
+	    LOG(DEBUG) << "TCH PROCESS BURST 1";
 	    deinterleave(0);
-	    LOG(INFO) <<"TCH PROCESS BURST 2";
+	    LOG(DEBUG) << "TCH PROCESS BURST 2";
 	}
 
 	// See if this was the end of a stolen frame, GSM 05.03 4.2.5.
@@ -1260,12 +1253,12 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	OBJLOG(DEBUG) <<"TCHFACCHL1Decoder Hl=" << inBurst.Hl() << " Hu=" << inBurst.Hu();
 	if (stolen) {
 		if (decode()) {
-			OBJLOG(DEBUG) <<"TCHFACCHL1Decoder good FACCH frame";
+			OBJLOG(DEBUG) << "TCHFACCHL1Decoder good FACCH frame";
 			countGoodFrame();
 			mD.LSB8MSB();
 			handleGoodFrame();
 		} else {
-			OBJLOG(DEBUG) <<"TCHFACCHL1Decoder bad FACCH frame";
+			OBJLOG(DEBUG) << "TCHFACCHL1Decoder bad FACCH frame";
 			countBadFrame();
 		}
 	}
@@ -1274,7 +1267,7 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	// decodeTCH will handle the GSM 06.11 bad frmae processing.
 	bool traffic = decodeTCH(stolen);
 	if (traffic) {
-	    OBJLOG(DEBUG) <<"TCHFACCHL1Decoder good TCH frame";
+	    OBJLOG(DEBUG) << "TCHFACCHL1Decoder good TCH frame";
 	    countGoodFrame();
 	    // Don't let the channel timeout.
 	    ScopedLock lock(mLock);
@@ -1295,9 +1288,9 @@ void TCHFACCHL1Decoder::decrypt()
 	if(cipherID) {
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
-	    mI[B].xor_apply(gamma, 114);
+	    mI[B].xor_apply(gamma, 114);	
+	    LOG(INFO) <<"TCHFACCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
 	}
-	LOG(INFO) <<"TCHFACCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
     }
 }
 
@@ -1346,27 +1339,25 @@ bool TCHFACCHL1Decoder::decodeTCH(bool stolen)
 	
 		// 3.1.2.1
 		// check parity of class 1A
-		unsigned sentParity = (~mTCHU.peekField(91,3)) & 0x07;
+		unsigned sentParity = (~mTCHU.peekField(91, 3)) & 0x07;
 		unsigned calcParity = mClass1A_d.parity(mTCHParity) & 0x07;
 
 		// 3.1.2.2
 		// Check the tail bits, too.
 		unsigned tail = mTCHU.peekField(185,4);
 	
-		OBJLOG(DEBUG) <<"TCHFACCHL1Decoder c[]=" << mC;
-		OBJLOG(DEBUG) <<"TCHFACCHL1Decoder u[]=" << mTCHU;
-		OBJLOG(DEBUG) <<"TCHFACCHL1Decoder d[]=" << mTCHD;
-		OBJLOG(DEBUG) <<"TCHFACCHL1Decoder sentParity=" << sentParity
-			<< " calcParity=" << calcParity << " tail=" << tail;
-		good = (sentParity==calcParity) && (tail==0);
-		if (good) {
-			// Undo Um's importance-sorted bit ordering.
+		OBJLOG(DEBUG) << "TCHFACCHL1Decoder c[]=" << mC;
+		OBJLOG(DEBUG) << "TCHFACCHL1Decoder u[]=" << mTCHU;
+		OBJLOG(DEBUG) << "TCHFACCHL1Decoder d[]=" << mTCHD;
+		OBJLOG(DEBUG) << "TCHFACCHL1Decoder sentParity=" << sentParity << " calcParity=" << calcParity << " tail=" << tail;
+		good = (sentParity == calcParity) && (tail == 0);
+		if (good) {// Undo Um's importance-sorted bit ordering.
 			// See GSM 05.03 3.1 and Table 2.
 			BitVector payload = mVFrame.payload();
-			mTCHD.unmap(g610BitOrder,260,payload);
+			mTCHD.unmap(g610BitOrder, 260, payload);
 			mVFrame.pack(newFrame);
 			// Save a copy for bad frame processing.
-			memcpy(mPrevGoodFrame,newFrame,33);
+			memcpy(mPrevGoodFrame, newFrame, 33);
 		}
 	}
 
@@ -1393,16 +1384,8 @@ bool TCHFACCHL1Decoder::decodeTCH(bool stolen)
 
 
 
-
-
-
-
-
-void GSM::TCHFACCHL1EncoderRoutine( TCHFACCHL1Encoder * encoder )
-{
-	while (1) {
-		encoder->dispatch();
-	}
+void GSM::TCHFACCHL1EncoderRoutine( TCHFACCHL1Encoder * encoder ) {
+    while (1) { encoder->dispatch(); }
 }
 
 
@@ -1413,12 +1396,12 @@ TCHFACCHL1Encoder::TCHFACCHL1Encoder(
 	const TDMAMapping& wMapping,
 	L1FEC *wParent)
 	:XCCHL1Encoder(wTN, wMapping, wParent), 
-	mPreviousFACCH(false),mOffset(0),
-	mTCHU(189),mTCHD(260),
-	mClass1_c(mC.head(378)),mClass1A_d(mTCHD.head(50)),mClass2_d(mTCHD.segment(182,78)),
+	mPreviousFACCH(false), mOffset(0),
+	mTCHU(189), mTCHD(260),
+	mClass1_c(mC.head(378)), mClass1A_d(mTCHD.head(50)), mClass2_d(mTCHD.segment(182,78)),
 	mTCHParity(0x0b,3,50)
 {
-	for(int k = 0; k<8; k++) {
+	for(int k = 0; k < 8; k++) {
 	    mE[k] = BitVector(114);
 		mI[k] = BitVector(114);
 		// Fill with zeros just to make Valgrind happy.
@@ -1428,23 +1411,18 @@ TCHFACCHL1Encoder::TCHFACCHL1Encoder(
 }
 
 
-
-
 void TCHFACCHL1Encoder::start()
 {
 	L1Encoder::start();
-	OBJLOG(DEBUG) <<"TCHFACCHL1Encoder";
-	mEncoderThread.start((void*(*)(void*))TCHFACCHL1EncoderRoutine,(void*)this);
+	OBJLOG(DEBUG) << "TCHFACCHL1Encoder";
+	mEncoderThread.start((void*(*)(void*))TCHFACCHL1EncoderRoutine, (void*)this);
 }
 
 
-
-
-void TCHFACCHL1Encoder::open()
-{
-	// There was over stuff here at one time to justify overriding the default.
-	// But it's gone now.
-	XCCHL1Encoder::open();
+void TCHFACCHL1Encoder::open() {
+    // There was over stuff here at one time to justify overriding the default.
+    // But it's gone now.
+    XCCHL1Encoder::open();
 }
 
 
@@ -1482,11 +1460,7 @@ void TCHFACCHL1Encoder::encodeTCH(const VocoderFrame& vFrame)
 }
 
 
-
-
-
-void TCHFACCHL1Encoder::sendFrame( const L2Frame& frame )
-{
+void TCHFACCHL1Encoder::sendFrame( const L2Frame& frame ) {
 	OBJLOG(DEBUG) << "TCHFACCHL1Encoder " << frame;
 	mL2Q.write(new L2Frame(frame));
 }
@@ -1495,7 +1469,6 @@ void TCHFACCHL1Encoder::sendFrame( const L2Frame& frame )
 
 void TCHFACCHL1Encoder::dispatch()
 {
-
 	// No downstream?  That's a problem.
 	assert(mDownstream);
 
@@ -1573,25 +1546,24 @@ void TCHFACCHL1Encoder::dispatch()
 		rollForward();
 	}	
 */
-	for (int B=0; B<8; B++) {
-		// set TDMA position
-		mBurst.time(mNextWriteTime);
-		// copy in the bits
+	for (int B = 0; B < 8; B++) {
+	    // set TDMA position
+	    mBurst.time(mNextWriteTime);
+	    // copy in the bits
 		
-		mE[B].segment(0,57).copyToSegment(mBurst,3);
-		mE[B].segment(57,57).copyToSegment(mBurst,88);
-		LOG(INFO) <<"TCHFACCHL1Decoder  COPYTOSEGMENT";
-		// stealing bits
-		mBurst.Hu(currentFACCH);
-		mBurst.Hl(mPreviousFACCH);
-		// send
-		OBJLOG(DEBUG) <<"TCHFACCHEncoder sending burst=" << mBurst;
-		mDownstream->writeHighSide(mBurst);
-		rollForward();
+	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
+	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);
+	    LOG(DEBUG) <<"TCHFACCHL1Decoder  COPYTOSEGMENT";
+	    // stealing bits
+	    mBurst.Hu(currentFACCH);
+	    mBurst.Hl(mPreviousFACCH);
+	    // send
+	    OBJLOG(DEBUG) <<"TCHFACCHEncoder sending burst=" << mBurst;
+	    mDownstream->writeHighSide(mBurst);
+	    rollForward();
 	}
 	// Updaet the offset for the next transmission.
-	if (mOffset==0) mOffset=4;
-	else mOffset=0;
+	if (0 == mOffset) mOffset = 4; else mOffset = 0;
 
 	// Save the stealing flag.
 	mPreviousFACCH = currentFACCH;
@@ -1601,39 +1573,33 @@ void TCHFACCHL1Encoder::dispatch()
 
 void TCHFACCHL1Encoder::interleave(int blockOffset)
 {
-	// GSM 05.03, 3.1.3
-	for (int k=0; k<456; k++) {
-		int B = ( k + blockOffset ) % 8;
-		int j = 2*((49*k) % 57) + ((k%8)/4);
-		mI[B][j] = mC[k];
-	}
+    // GSM 05.03, 3.1.3
+    for (int k = 0; k < 456; k++) {
+	int B = ( k + blockOffset ) % 8;
+	int j = 2 * ((49 * k) % 57) + ((k % 8) / 4);
+	mI[B][j] = mC[k];
+    }
 }
 
 
-bool TCHFACCHL1Decoder::uplinkLost() const
-{
-	ScopedLock lock(mLock);
-	return mT3109.expired();
+bool TCHFACCHL1Decoder::uplinkLost() const {
+    ScopedLock lock(mLock);
+    return mT3109.expired();
 }
 
 
-void SACCHL1FEC::setPhy(const SACCHL1FEC& other)
-{
-	mSACCHDecoder->setPhy(*other.mSACCHDecoder);
-	mSACCHEncoder->setPhy(*other.mSACCHEncoder);
+void SACCHL1FEC::setPhy(const SACCHL1FEC& other) {
+    mSACCHDecoder->setPhy(*other.mSACCHDecoder);
+    mSACCHEncoder->setPhy(*other.mSACCHEncoder);
 }
 
-void SACCHL1FEC::setPhy(float RSSI, float timingError)
-{
-	mSACCHDecoder->setPhy(RSSI,timingError);
-	mSACCHEncoder->setPhy(RSSI,timingError);
+void SACCHL1FEC::setPhy(float RSSI, float timingError) {
+    mSACCHDecoder->setPhy(RSSI,timingError);
+    mSACCHEncoder->setPhy(RSSI,timingError);
 }
 
 
-
-
-void SACCHL1Decoder::open()
-{
+void SACCHL1Decoder::open() {
 	OBJLOG(DEBUG) << "SACCHL1Decoder";
 	XCCHL1Decoder::open();
 	// Set initial defaults for power and timing advance.
@@ -1648,21 +1614,19 @@ void SACCHL1Decoder::open()
 void SACCHL1Decoder::setPhy(float wRSSI, float wTimingError)
 {
 	// Used to initialize L1 phy parameters.
-	for (int i=0; i<4; i++) mRSSI[i]=wRSSI;
-	for (int i=0; i<4; i++) mTimingError[i]=wTimingError;
-	OBJLOG(INFO) << "SACCHL1Decoder RSSI=" << wRSSI << "timingError=" << wTimingError;
+	for (int i = 0; i < 4; i++) mRSSI[i] = wRSSI;
+	for (int i = 0; i < 4; i++) mTimingError[i] = wTimingError;
+	OBJLOG(DEBUG) << "SACCHL1Decoder RSSI=" << wRSSI << "timingError=" << wTimingError;
 }
 
 void SACCHL1Decoder::setPhy(const SACCHL1Decoder& other)
-{
-	// Used to initialize a new SACCH L1 phy parameters
-	// from those of a preexisting established channel.
+{// Used to initialize a new SACCH L1 phy parameters
+// from those of a preexisting established channel.
 	mActualMSPower = other.mActualMSPower;
 	mActualMSTiming = other.mActualMSTiming;
-	for (int i=0; i<4; i++) mRSSI[i]=other.mRSSI[i];
-	for (int i=0; i<4; i++) mTimingError[i]=other.mTimingError[i];
-	OBJLOG(INFO) << "SACCHL1Decoder actuals RSSI=" << mRSSI[0] << "timingError=" << mTimingError[0]
-		<< " MSPower=" << mActualMSPower << " MSTiming=" << mActualMSTiming;
+	for (int i = 0; i < 4; i++) mRSSI[i] = other.mRSSI[i];
+	for (int i = 0; i < 4; i++) mTimingError[i] = other.mTimingError[i];
+	OBJLOG(DEBUG) << "SACCHL1Decoder actuals RSSI=" << mRSSI[0] << "timingError=" << mTimingError[0] << " MSPower=" << mActualMSPower << " MSTiming=" << mActualMSTiming;
 }
 
 
@@ -1681,33 +1645,27 @@ void SACCHL1Encoder::setPhy(float wRSSI, float wTimingError)
 	mOrderedMSPower = actualPower - deltaP;
 	float maxPower = gConfig.getNum("GSM.MS.Power.Max");
 	float minPower = gConfig.getNum("GSM.MS.Power.Min");
-	if (mOrderedMSPower>maxPower) mOrderedMSPower=maxPower;
-	else if (mOrderedMSPower<minPower) mOrderedMSPower=minPower;
-	OBJLOG(INFO) <<"SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget
-		<< " deltaP=" << deltaP << " actual=" << actualPower << " order=" << mOrderedMSPower;
+	if (mOrderedMSPower > maxPower) mOrderedMSPower = maxPower;
+	else if (mOrderedMSPower < minPower) mOrderedMSPower = minPower;
+	OBJLOG(DEBUG) << "SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget << " deltaP=" << deltaP << " actual=" << actualPower << " order=" << mOrderedMSPower;
 	// Timing Advance
 	float timingError = sib.timingError();
 	float actualTiming = sib.actualMSTiming();
 	mOrderedMSTiming = actualTiming + timingError;
 	float maxTiming = gConfig.getNum("GSM.MS.TA.Max");
-	if (mOrderedMSTiming<0.0F) mOrderedMSTiming=0.0F;
-	else if (mOrderedMSTiming>maxTiming) mOrderedMSTiming=maxTiming;
-	OBJLOG(INFO) << "SACCHL1Encoder timingError=" << timingError  <<
-		" actual=" << actualTiming << " ordered=" << mOrderedMSTiming;
+	if (mOrderedMSTiming < 0.0F) mOrderedMSTiming=0.0F;
+	else if (mOrderedMSTiming > maxTiming) mOrderedMSTiming = maxTiming;
+	OBJLOG(DEBUG) << "SACCHL1Encoder timingError=" << timingError  << " actual=" << actualTiming << " ordered=" << mOrderedMSTiming;
 }
 
 
 void SACCHL1Encoder::setPhy(const SACCHL1Encoder& other)
-{
-	// Used to initialize a new SACCH L1 phy parameters
-	// from those of a preexisting established channel.
+{// Used to initialize a new SACCH L1 phy parameters
+// from those of a preexisting established channel.
 	mOrderedMSPower = other.mOrderedMSPower;
 	mOrderedMSTiming = other.mOrderedMSTiming;
-	OBJLOG(INFO) << "SACCHL1Encoder orders MSPower=" << mOrderedMSPower << " MSTiming=" << mOrderedMSTiming;
+	OBJLOG(DEBUG) << "SACCHL1Encoder orders MSPower=" << mOrderedMSPower << " MSTiming=" << mOrderedMSTiming;
 }
-
-
-
 
 
 SACCHL1Encoder::SACCHL1Encoder(unsigned wTN, const TDMAMapping& wMapping, SACCHL1FEC *wParent)
@@ -1717,31 +1675,22 @@ SACCHL1Encoder::SACCHL1Encoder(unsigned wTN, const TDMAMapping& wMapping, SACCHL
 { }
 
 
-void SACCHL1Encoder::open()
-{
-	OBJLOG(INFO) <<"SACCHL1Encoder";
+void SACCHL1Encoder::open() {
+	OBJLOG(DEBUG) <<"SACCHL1Encoder";
 	XCCHL1Encoder::open();
 	mOrderedMSPower = 33;
 	mOrderedMSTiming = 0;
 }
 
 
+SACCHL1Encoder* SACCHL1Decoder::SACCHSibling() { return mSACCHParent->encoder(); }
 
-SACCHL1Encoder* SACCHL1Decoder::SACCHSibling() 
-{
-	return mSACCHParent->encoder();
-}
-
-SACCHL1Decoder* SACCHL1Encoder::SACCHSibling() 
-{
-	return mSACCHParent->decoder();
-}
-
+SACCHL1Decoder* SACCHL1Encoder::SACCHSibling() { return mSACCHParent->decoder(); }
 
 
 void SACCHL1Encoder::sendFrame(const L2Frame& frame)
 {
-	OBJLOG(INFO) << "SACCHL1Encoder " << frame;
+	OBJLOG(DEBUG) << "SACCHL1Encoder " << frame;
 
 	// Physical header, GSM 04.04 6, 7.1
 	// Power and timing control, GSM 05.08 4, GSM 05.10 5, 6.
@@ -1755,35 +1704,32 @@ void SACCHL1Encoder::sendFrame(const L2Frame& frame)
 		float deltaP = RSSI - RSSITarget;
 		float actualPower = sib.actualMSPower();
 		float targetMSPower = actualPower - deltaP;
-		float powerDamping = gConfig.getNum("GSM.MS.Power.Damping")*0.01F;
-		mOrderedMSPower = powerDamping*mOrderedMSPower + (1.0F-powerDamping)*targetMSPower;
+		float powerDamping = gConfig.getNum("GSM.MS.Power.Damping") * 0.01F;
+		mOrderedMSPower = powerDamping * mOrderedMSPower + (1.0F - powerDamping) * targetMSPower;
 		float maxPower = gConfig.getNum("GSM.MS.Power.Max");
 		float minPower = gConfig.getNum("GSM.MS.Power.Min");
-		if (mOrderedMSPower>maxPower) mOrderedMSPower=maxPower;
-		else if (mOrderedMSPower<minPower) mOrderedMSPower=minPower;
-		OBJLOG(DEBUG) <<"SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget
-			<< " deltaP=" << deltaP << " actual=" << actualPower << " order=" << mOrderedMSPower;
+		if (mOrderedMSPower > maxPower) mOrderedMSPower = maxPower;
+		else if (mOrderedMSPower < minPower) mOrderedMSPower = minPower;
+		OBJLOG(DEBUG) <<"SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget << " deltaP=" << deltaP << " actual=" << actualPower << " order=" << mOrderedMSPower;
 		// Timing.  GSM 05.10 5, 6.
 		// Time expressed in symbol periods.
 		float timingError = sib.timingError();
 		float actualTiming = sib.actualMSTiming();
 		float targetMSTiming = actualTiming + timingError;
-		float TADamping = gConfig.getNum("GSM.MS.TA.Damping")*0.01F;
-		mOrderedMSTiming = TADamping*mOrderedMSTiming + (1.0F-TADamping)*targetMSTiming;
+		float TADamping = gConfig.getNum("GSM.MS.TA.Damping") * 0.01F;
+		mOrderedMSTiming = TADamping * mOrderedMSTiming + (1.0F - TADamping) * targetMSTiming;
 		float maxTiming = gConfig.getNum("GSM.MS.TA.Max");
-		if (mOrderedMSTiming<0.0F) mOrderedMSTiming=0.0F;
-		else if (mOrderedMSTiming>maxTiming) mOrderedMSTiming=maxTiming;
-		OBJLOG(DEBUG) << "SACCHL1Encoder timingError=" << timingError
-			<< " actual=" << actualTiming << " ordered=" << mOrderedMSTiming
-			<< " target=" << targetMSTiming;
+		if (mOrderedMSTiming < 0.0F) mOrderedMSTiming = 0.0F;
+		else if (mOrderedMSTiming > maxTiming) mOrderedMSTiming = maxTiming;
+		OBJLOG(DEBUG) << "SACCHL1Encoder timingError=" << timingError << " actual=" << actualTiming << " ordered=" << mOrderedMSTiming << " target=" << targetMSTiming;
 //	}
 
 	// Write physical header into mU and then call base class.
 
 	// SACCH physical header, GSM 04.04 6.1, 7.1.
-	OBJLOG(INFO) <<"SACCHL1Encoder orders pow=" << mOrderedMSPower << " TA=" << mOrderedMSTiming;
-	mU.fillField(0,encodePower(mOrderedMSPower),8);
-	mU.fillField(8,(int)(mOrderedMSTiming+0.5F),8);	// timing (GSM 04.04 6.1)
+	OBJLOG(DEBUG) << "SACCHL1Encoder orders pow=" << mOrderedMSPower << " TA=" << mOrderedMSTiming;
+	mU.fillField(0, encodePower(mOrderedMSPower), 8);
+	mU.fillField(8, (int)(mOrderedMSTiming + 0.5F), 8);	// timing (GSM 04.04 6.1)
 	OBJLOG(DEBUG) << "SACCHL1Encoder phy header " << mU.head(16);
 
 	// Encode the rest of the frame.
