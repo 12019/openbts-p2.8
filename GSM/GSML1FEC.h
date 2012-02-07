@@ -772,8 +772,8 @@ private:
 
 	bool mPreviousFACCH;	///< A copy of the previous stealing flag state.
 	size_t mOffset;			///< Current deinterleaving offset.
-
-	BitVector mI[8];			///< deinterleaving history, 8 blocks instead of 4
+	BitVector mE[8];  ///< decryption history, 8 blocks instead of 4
+	BitVector mI[8]; ///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;				///< u[], but for traffic
 	BitVector mTCHD;				///< d[], but for traffic
 	BitVector mClass1_c;			///< the class 1 part of taffic c[]
