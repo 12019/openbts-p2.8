@@ -594,11 +594,11 @@ bool XCCHL1Decoder::processBurst(const RxBurst& inBurst)
 	// If the burst index is 0, save the time
 	if (0 == B) mReadTime = inBurst.time();
 
-	LOG(INFO) << "XCCHL1Decoder PROCESS BURST";
-	inBurst.data1().copyToSegment(mE[B],0);
-	LOG(INFO) << "XCCHL1Decoder PROCESS BURST copytosegment data 1 done";
-	inBurst.data2().copyToSegment(mE[B],57);
-	LOG(INFO) << "XCCHL1Decoder PROCESS BURST copytosegment done";
+	LOG(DEBUG) << "XCCHL1Decoder PROCESS BURST";
+	inBurst.data1().copyToSegment(mE[B], 0);
+	LOG(DEBUG) << "XCCHL1Decoder PROCESS BURST copytosegment data 1 done";
+	inBurst.data2().copyToSegment(mE[B], 57);
+	LOG(DEBUG) << "XCCHL1Decoder PROCESS BURST copytosegment done";
 
 	// If the burst index is 3, then this is the last burst in the L2 frame.
 	// Return true to indicate that we are ready to deinterleave.
@@ -619,25 +619,26 @@ void XCCHL1Decoder::decrypt()
 	mI[B] = mE[B];
 	if(channelType() == SDCCHType)
 	{
-	    LOG(INFO)<< "XCCHL1Decoder decrypt frame number " << FN;
+	    LOG(DEBUG)<< "XCCHL1Decoder decrypt frame number " << FN;
 	
 	    if(cipherID) {
+		LOG(INFO) <<"applying gamma for " << cipherID;
 		ubit_t gamma[114];
 		osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
 		mI[B].xor_apply(gamma, 114);
 	    }
-	    LOG(INFO) <<"XCCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
+	    LOG(DEBUG) <<"mI["<< B <<"]: "<< mI[B];
+	    LOG(DEBUG) <<"mE["<< B <<"]: "<< mE[B];
 	}
     }
 }
 
-void XCCHL1Decoder::deinterleave()
-{
-	// Deinterleave i[][] to c[].
-	// This comes directly from GSM 05.03, 4.1.4.
-	for (int k=0; k<456; k++) {
-		int B = k%4;
-		int j = 2*((49*k) % 57) + ((k%8)/4);
+void XCCHL1Decoder::deinterleave() {
+    // Deinterleave i[][] to c[].
+    // This comes directly from GSM 05.03, 4.1.4.
+	for (int k = 0; k < 456; k++) {
+		int B = k % 4;
+		int j = 2 * ((49 * k) % 57) + ((k % 8) / 4);
 		mC[k] = mI[B][j];
 		// Mark this i[][] bit as unknown now.
 		// This makes it possible for the soft decoder to work around
@@ -946,17 +947,18 @@ SDCCHL1Encoder::SDCCHL1Encoder(
 }
 
 
-void XCCHL1Encoder::encrypt()
+void XCCHL1Encoder::encrypt() 
 {
-    for (int B = 0; B < 4; B++)
-    {
+    for (int B = 0; B < 4; B++) {
 	mE[B] = mI[B];
 	if(cipherID) {
+	    LOG(INFO) <<"applying gamma for " << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
-	    LOG(INFO) << "XCCHL1Encoder " << cipherID << " encrypt: " << mI[B] << " -> " << mE[B];
 	}
+	LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
+	LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
     }
 }
 
@@ -1286,20 +1288,22 @@ void TCHFACCHL1Decoder::decrypt()
     {
 	mI[B] = mE[B];
 	if(cipherID) {
+	    LOG(INFO) <<"applying gamma for " << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
 	    mI[B].xor_apply(gamma, 114);	
-	    LOG(INFO) <<"TCHFACCHL1Decoder decrypt: "<< mI[B] << " <-" << mE[B];
 	}
+	LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
+	LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
     }
 }
 
 void TCHFACCHL1Decoder::deinterleave(int blockOffset )
 {
 	OBJLOG(DEBUG) <<"TCHFACCHL1Decoder blockOffset=" << blockOffset;
-	for (int k=0; k<456; k++) {
+	for (int k = 0; k < 456; k++) {
 		int B = ( k + blockOffset ) % 8;
-		int j = 2*((49*k) % 57) + ((k%8)/4);
+		int j = 2 *((49 * k) % 57) + ((k % 8) / 4);
 		mC[k] = mI[B][j];
 		mI[B][j] = 0.5F;
 	}
