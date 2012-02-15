@@ -491,34 +491,27 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		}
 		LOG(INFO) << *resp;
 		const L3MobileStationClassmark2& classmark = resp->classmark();
-		if (!gTMSITable.classmark(IMSI,classmark))
+		if (!gTMSITable.classmark(IMSI, classmark))
 			LOG(WARNING) << "failed access to TMSITable";
 		delete msg;
 	    }
 
 	// We fail closed unless we're configured otherwise
 	if (!success && !openRegistration) {
-		LOG(INFO) << "registration FAILED: " << mobileID;
-		DCCH->send(L3LocationUpdatingReject(gConfig.getNum("Control.LUR.UnprovisionedRejectCause")));
-		if (!preexistingTMSI) {
-			sendWelcomeMessage( "Control.LUR.FailedRegistration.Message",
-				"Control.LUR.FailedRegistration.ShortCode", IMSI,DCCH);
-		}
-		// Release the channel and return.
-		DCCH->send(L3ChannelRelease());
-		return;
+	    LOG(INFO) << "registration FAILED: " << mobileID;
+	    DCCH->send(L3LocationUpdatingReject(gConfig.getNum("Control.LUR.UnprovisionedRejectCause")));
+	    if (!preexistingTMSI) {
+		sendWelcomeMessage("Control.LUR.FailedRegistration.Message", "Control.LUR.FailedRegistration.ShortCode", IMSI, DCCH);
+	    }
+	    // Release the channel and return.
+	    DCCH->send(L3ChannelRelease());
+	    return;
 	}
 
 	// If success is true, we had a normal registration.
 	// Otherwise, we are here because of open registration.
 	// Either way, we're going to register a phone if we arrive here.
-	LOG(DEBUG) << "success: " << success << " openRegistration: " << openRegistration << endl;
-	if (success) {
-		LOG(INFO) << "registration SUCCESS: " << mobileID;
-	} else {
-		LOG(INFO) << "registration ALLOWED: " << mobileID;
-	}
-
+	LOG(INFO) << "registering " << mobileID << " auth: " << success << " openRegistration: " << openRegistration;
 
 	// Send the "short name" and time-of-day.
 	if (IMSIAttach && gConfig.defines("GSM.Identity.ShortName")) {
