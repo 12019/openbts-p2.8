@@ -721,8 +721,7 @@ float SACCHL1Decoder::timingError() const
 
 
 
-bool SACCHL1Decoder::processBurst(const RxBurst& inBurst)
-{
+bool SACCHL1Decoder::processBurst(const RxBurst& inBurst) {
 	// TODO -- One quick test of burst validity is to look at the tail bits.
 	// We could do that as a double-check against putting garbage into
 	// the interleaver or accepting bad parameters.
@@ -735,11 +734,10 @@ bool SACCHL1Decoder::processBurst(const RxBurst& inBurst)
 	// Timing error is a float in symbol intervals.
 	mTimingError[mRSSICounter] = inBurst.timingError();
 
-	OBJLOG(INFO) << "SACCHL1Decoder " << " RSSI=" << inBurst.RSSI()
-			<< " timingError=" << inBurst.timingError();
+	OBJLOG(DEBUG) << "SACCHL1Decoder " << " RSSI=" << inBurst.RSSI() << " timingError=" << inBurst.timingError();
 
 	mRSSICounter++;
-	if (mRSSICounter>3) mRSSICounter=0;
+	if (mRSSICounter > 3) mRSSICounter = 0;
 
 	return XCCHL1Decoder::processBurst(inBurst);
 }
