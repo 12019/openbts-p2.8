@@ -457,13 +457,11 @@ void *GSM::RACHL1DecoderServiceLoopAdapter(RACHL1Decoder* obj)
 }
 
 
-void RACHL1Decoder::start()
-{
+void RACHL1Decoder::start() {
 	// Start the processing thread.
 	L1Decoder::start();
 	mServiceThread.start((void*(*)(void*))RACHL1DecoderServiceLoopAdapter,this);
 }
-
 
 
 void RACHL1Decoder::writeLowSide(const RxBurst& burst)
@@ -478,14 +476,14 @@ void RACHL1Decoder::writeLowSide(const RxBurst& burst)
 	// False alarm rate for random inputs is 1/1024.
 
 	// Check the tail bits -- should all the zero.
-	if (mU.peekField(14,4)) {
+	if (mU.peekField(14, 4)) {
 		countBadFrame();
 		return;
 	}
 
 	// Check the parity.
 	// The parity word is XOR'd with the BSIC. (GSM 05.03 4.6.)
-	unsigned sentParity = ~mU.peekField(8,6);
+	unsigned sentParity = ~mU.peekField(8, 6);
 	unsigned checkParity = mD.parity(mParity);
 	unsigned encodedBSIC = (sentParity ^ checkParity) & 0x03f;
 	if (encodedBSIC != gBTS.BSIC()) {
@@ -502,10 +500,9 @@ void RACHL1Decoder::writeLowSide(const RxBurst& burst)
 
 	countGoodFrame();
 	mD.LSB8MSB();
-	unsigned RA = mD.peekField(0,8);
-	OBJLOG(INFO) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time()
-		<< " with RSSI=" << burst.RSSI() << " timingError=" << burst.timingError();
-	gBTS.channelRequest(new Control::ChannelRequestRecord(RA,burst.time(),burst.RSSI(),burst.timingError()));
+	unsigned RA = mD.peekField(0, 8);
+	OBJLOG(DEBUG) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time() << " with RSSI=" << burst.RSSI() << " timingError=" << burst.timingError();
+	gBTS.channelRequest(new Control::ChannelRequestRecord(RA, burst.time(), burst.RSSI(), burst.timingError()));
 }
 
 
@@ -521,9 +518,6 @@ void RACHL1Decoder::writeLowSide(const RxBurst& burst)
 	in GSM and are offer here as examples.
 */
 
-
-
-
 XCCHL1Decoder::XCCHL1Decoder(
 		unsigned wTN,
 		const TDMAMapping& wMapping,
@@ -531,9 +525,9 @@ XCCHL1Decoder::XCCHL1Decoder(
 	:L1Decoder(wTN,wMapping,wParent),
 	mBlockCoder(0x10004820009ULL, 40, 224),
 	mC(456), mU(228),
-	mP(mU.segment(184,40)),mDP(mU.head(224)),mD(mU.head(184))
+	mP(mU.segment(184, 40)), mDP(mU.head(224)), mD(mU.head(184))
 {
-	for (int i=0; i<4; i++) {
+	for (int i = 0; i < 4; i++) {
 	    mE[i] = SoftVector(114);
 		mI[i] = SoftVector(114);
 		// Fill with zeros just to make Valgrind happy.
@@ -747,19 +741,16 @@ void SACCHL1Decoder::handleGoodFrame()
 {
 	// GSM 04.04 7
 	OBJLOG(DEBUG) << "SACCHL1Decoder phy header " << mU.head(16);
-	mActualMSPower = decodePower(mU.peekField(3,5));
-	int TAField = mU.peekField(9,7);
-	if (TAField<64) mActualMSTiming = TAField;
-	OBJLOG(INFO) << "SACCHL1Decoder actuals pow=" << mActualMSPower << " TA=" << mActualMSTiming;
+	mActualMSPower = decodePower(mU.peekField(3, 5));
+	int TAField = mU.peekField(9, 7);
+	if (TAField < 64) mActualMSTiming = TAField;
+	OBJLOG(DEBUG) << "SACCHL1Decoder actuals pow=" << mActualMSPower << " TA=" << mActualMSTiming;
 	XCCHL1Decoder::handleGoodFrame();
 }
 
 
 
-XCCHL1Encoder::XCCHL1Encoder(
-		unsigned wTN,
-		const TDMAMapping& wMapping,
-		L1FEC* wParent)
+XCCHL1Encoder::XCCHL1Encoder(unsigned wTN, const TDMAMapping& wMapping, L1FEC* wParent)
 	:L1Encoder(wTN,wMapping,wParent),
 	mBlockCoder(0x10004820009ULL, 40, 224),
 	mC(456), mU(228), mD(mU.head(184)),mP(mU.segment(184, 40))
