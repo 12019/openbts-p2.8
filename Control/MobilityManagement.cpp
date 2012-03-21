@@ -133,8 +133,6 @@ bool sendWelcomeMessage(const char* messageName, const char* shortCodeName, cons
 	return true;
 }
 
-
-
 /**
 	Controller for the Location Updating transaction, GSM 04.08 4.4.4.
 	@param lur The location updating request.
@@ -166,9 +164,9 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// even if we don't actually assign it.
 	unsigned newTMSI = 0;
 	if (!preexistingTMSI) newTMSI = gTMSITable.assign(IMSI,lur);
+	string name = "IMSI" + string(IMSI);
 
 	// Try to register the IMSI.
-	string name = string("IMSI") + IMSI;
 	// This will be set true if registration succeeded.
 	LOG(INFO) << "Trying to authenticate " << name << "..." << endl;
 	unsigned auth_result = attemptAuth(mobileID, DCCH);

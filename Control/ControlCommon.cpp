@@ -102,7 +102,6 @@ L3Message* Control::getMessage(LogicalChannel *LCH, unsigned SAPI)
 	}
 	return msg;
 }
-
 // Try to authenticate mobID using given channel
 unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* LCH)
 {
