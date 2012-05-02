@@ -946,10 +946,10 @@ void XCCHL1Encoder::encrypt()
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
 	}
-	if(mI[B].compare(mE[B])) LOG(DEBUG) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
+	if(mI[B].compare(mE[B])) LOG(NOTICE) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
 	else {
-	    LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
-	    LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
+	    LOG(NOTICE) << "mI[" << B << "]=" << mI[B];
+	    LOG(NOTICE) << "mE[" << B << "]=" << mE[B];
 	}
     }
 }
@@ -1000,12 +1000,12 @@ void SDCCHL1Encoder::transmit()
 	for (int B = 0; B < 4; B++) {
 	    mBurst.time(mNextWriteTime);
 	    // Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-	    OBJLOG(DEBUG) << "SDCCHL1Encoder mE[" << B << "]=" << mE[B];	  
+//	    OBJLOG(DEBUG) << "SDCCHL1Encoder mE[" << B << "]=" << mE[B];
 	    LOG(DEBUG) << "SDCCHL1Encoder mE[" << B << "]=" << mE[B];
 	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
 	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);
 	    // Send it to the radio.
-	    OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
+//	    OBJLOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
 	    LOG(DEBUG) << "SDCCHL1Encoder mBurst=" << mBurst;
 	    mDownstream->writeHighSide(mBurst);
 	    rollForward();
