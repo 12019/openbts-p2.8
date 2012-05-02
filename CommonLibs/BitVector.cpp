@@ -427,6 +427,14 @@ bool BitVector::xor_apply(uint8_t * gamma, size_t len)
     return true;
 }
 
+bool BitVector::compare(const BitVector vec) {
+    if (size() != vec.size()) return false;
+    for (size_t i = 0; i < size(); i++) {
+	if (mStart[i] != vec.mStart[i]) return false;
+    }
+    return true;
+}
+
 bool SoftVector::xor_apply(uint8_t * gamma, size_t len)
 {
     if (len != size()) return false;

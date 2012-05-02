@@ -298,6 +298,9 @@ class BitVector : public Vector<char> {
 	// return false on non-boolean gamma or length mismatch
 	bool xor_apply(uint8_t * gamma, size_t len);
 
+	// bitwise comparison
+	bool compare(const BitVector vec);
+
 	/**@name Byte-wise operations. */
 	//@{
 	/** Reverse an 8-bit vector. */
