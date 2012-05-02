@@ -946,8 +946,11 @@ void XCCHL1Encoder::encrypt()
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
 	}
-	LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
-	LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
+	if(mI[B].compare(mE[B])) LOG(DEBUG) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
+	else {
+	    LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
+	    LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
+	}
     }
 }
 
