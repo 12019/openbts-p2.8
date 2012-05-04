@@ -176,7 +176,7 @@ public:
 		Can throw SIPTimeout().
 		@return True on success.
 	*/
-	bool Register(Method wMethod=SIPRegister, string *RAND = NULL, string *Kc = NULL, string *CKSN = NULL, const char *IMSI = NULL, const char *SRES = NULL);	
+	int Register(Method wMethod=SIPRegister, string *RAND = NULL, string *Kc = NULL, const char *IMSI = NULL, const char *SRES = NULL);	
 
 	/**
 		Send sip unregister and look at return msg.

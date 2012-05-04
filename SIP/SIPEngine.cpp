@@ -228,27 +228,27 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteDomain = string(origHost);
 }
 
-
-string randy401(osip_message_t *msg)
-{
-	if (msg->status_code != 401) return "";
+int randy401(osip_message_t *msg, string *RAND)
+{//return either CKSN (<8) or error code (>9)
+	if (msg->status_code != 401) return 10;
 	osip_www_authenticate_t *auth = (osip_www_authenticate_t*)osip_list_get(&msg->www_authenticates, 0);
 	if (auth == NULL) { 
 	    LOG(DEBUG) << "401 RAND: failed to obtain auth, oSIP list size " << osip_list_size(&msg->www_authenticates) << endl; 
-	    return ""; 
+	    return 11; 
 	}
 	char *rand = osip_www_authenticate_get_nonce(auth);
-	LOG(DEBUG) << "401 RAND: " << rand << endl;
-	string rands = rand ? string(rand) : "";
-	if (rands.length() != 32) {
-		LOG(WARNING) << "SIP RAND wrong length: " << rands;
-		return "";
+	char *cksn = osip_www_authenticate_get_opaque(auth);
+	LOG(DEBUG) << "401 RAND: " << rand << "CKSN: " << cksn << endl;
+	if(NULL != RAND) *RAND = string(rand); else return 12;
+	if ((*RAND).length() != 32) {
+		LOG(WARNING) << "SIP RAND wrong length: " << *RAND;
+		return 13;
 	}
-	return rands;
+	return atoi(cksn);
 }
 
-bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, string *CKSN, const char *IMSI, const char *SRES)
-{
+int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
+{// return CKSN or error code: 200-success, >=202 - error
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
 	// Before start, need to add mCallID
@@ -283,7 +283,6 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, string *CKSN
 	LOG(DEBUG) << "writing registration " << reg;
 	gSIPInterface.write(&mProxyAddr,reg);
 
-	bool success = false;
 	osip_message_t *msg = NULL;
 	Timeval timeout(gConfig.getNum("SIP.Timer.F"));
 	while (!timeout.passed()) {
@@ -300,37 +299,35 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, string *CKSN
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 
-		if (status == 200) { // extrat Kc and CKSN from response
+		if (status == 200) { // extrat Kc from response
 		    LOG(INFO) << "REGISTER success";
-		    success = true;
 		    osip_authentication_info_t * auth_info;
 		    osip_message_get_authentication_info(msg, 0, &auth_info);
 		    if (NULL == auth_info) break;
 		    char * qop = osip_authentication_info_get_qop_options(auth_info);
 		    char * key = osip_authentication_info_get_rspauth(auth_info);
-		    char * cksn = osip_authentication_info_get_cnonce(auth_info);
-		    LOG(INFO) << "found " << qop << " number " << cksn << " in response: " << key;
+		    LOG(INFO) << "found " << qop << " in response: " << key;
 		    *Kc = string(key + 1, 16);
-		    *CKSN = string(cksn);
-		    break;
+		    return 200;//success
 		}
 
 		if (status == 401) {
-		    string wRAND = randy401(msg);
+		    string wRAND;
+		    int cksn = randy401(msg, &wRAND);
 		    // if rand is included on 401 unauthorized, then the challenge-response game is afoot
 		    if (wRAND.length() != 0 && RAND != NULL) {
 			LOG(INFO) << "REGISTER challenge RAND=" << wRAND;
 			*RAND = wRAND;
 			osip_message_free(msg);
 			osip_message_free(reg);
-			return false;
+			return cksn;
 		    } else {
 			LOG(DEBUG) << "REGISTER fail [" << wRAND << "]-- unauthorized";
-			break;
+			return 401;
 		    }
 		}
-		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; break; }
-		if (status >= 200) { LOG(NOTICE) << "REGISTER unexpected response " << status; break; }
+		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
+		if (status >= 200) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
 	}
 
 	if (!msg) {
@@ -341,7 +338,7 @@ bool SIPEngine::Register(Method wMethod , string *RAND, string *Kc, string *CKSN
 	osip_message_free(reg);
 	osip_message_free(msg);
 	gSIPInterface.removeCall(mCallID);
-	return success;
+	return 666;
 }
 
 
