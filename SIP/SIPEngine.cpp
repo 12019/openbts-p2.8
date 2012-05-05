@@ -228,27 +228,22 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteDomain = string(origHost);
 }
 
-int randy401(osip_message_t *msg, string *RAND)
-{//return either CKSN (<8) or error code (>9)
-	if (msg->status_code != 401) return 10;
-	osip_www_authenticate_t *auth = (osip_www_authenticate_t*)osip_list_get(&msg->www_authenticates, 0);
-	if (auth == NULL) { 
-	    LOG(DEBUG) << "401 RAND: failed to obtain auth, oSIP list size " << osip_list_size(&msg->www_authenticates) << endl; 
-	    return 11; 
-	}
-	char *rand = osip_www_authenticate_get_nonce(auth);
-	char *cksn = osip_www_authenticate_get_opaque(auth);
-	LOG(DEBUG) << "401 RAND: " << rand << "CKSN: " << cksn << endl;
-	if(NULL != RAND) *RAND = string(rand); else return 12;
-	if ((*RAND).length() != 32) {
-		LOG(WARNING) << "SIP RAND wrong length: " << *RAND;
-		return 13;
-	}
-	return atoi(cksn);
+int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned length)
+{//extract 'length' bytes from oSIP message with code 'status', return extracted success (<8) or error code (>9)
+	if (msg->status_code != status) return 10;
+	osip_authentication_info_t * auth_info;
+	osip_message_get_authentication_info(msg, 0, &auth_info);
+	if (NULL == auth_info) return 11;
+	char * qop = osip_authentication_info_get_qop_options(auth_info);
+	char * key = osip_authentication_info_get_rspauth(auth_info);
+	if (NULL == qop or NULL == key) return 12;
+	*data = string(key + 1, length);
+	osip_message_free(msg); // only cleanup if extraction succeed
+	return atoi(qop);
 }
 
 int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
-{// return CKSN or error code: 200-success, >=202 - error
+{// return CKSN or error code, 200==OK
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
 	// Before start, need to add mCallID
@@ -281,7 +276,7 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 	} else { assert(0); }
 
 	LOG(DEBUG) << "writing registration " << reg;
-	gSIPInterface.write(&mProxyAddr,reg);
+	gSIPInterface.write(&mProxyAddr, reg);
 
 	osip_message_t *msg = NULL;
 	Timeval timeout(gConfig.getNum("SIP.Timer.F"));
@@ -291,43 +286,30 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 		    msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.E"));
 		} catch (SIPTimeout) {// send again
 		    LOG(NOTICE) << "SIP REGISTER packet to " << mProxyIP << ":" << mProxyPort << " timeout; resending";
-		    gSIPInterface.write(&mProxyAddr,reg);
+		    gSIPInterface.write(&mProxyAddr, reg);
 		    continue;
 		}
 
 		assert(msg);
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
-
-		if (status == 200) { // extrat Kc from response
-		    LOG(INFO) << "REGISTER success";
-		    osip_authentication_info_t * auth_info;
-		    osip_message_get_authentication_info(msg, 0, &auth_info);
-		    if (NULL == auth_info) break;
-		    char * qop = osip_authentication_info_get_qop_options(auth_info);
-		    char * key = osip_authentication_info_get_rspauth(auth_info);
-		    LOG(INFO) << "found " << qop << " in response: " << key;
-		    *Kc = string(key + 1, 16);
+		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
+		if (status >= 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
+		
+		int ext = osip_extract(msg, 200, Kc, 16);// extrat Kc from response
+		if (ext < 8) {
+		    LOG(INFO) << "REGISTER success: found " << ext << " in response: " << *Kc;
 		    return 200;//success
 		}
 
-		if (status == 401) {
-		    string wRAND;
-		    int cksn = randy401(msg, &wRAND);
-		    // if rand is included on 401 unauthorized, then the challenge-response game is afoot
-		    if (wRAND.length() != 0 && RAND != NULL) {
-			LOG(INFO) << "REGISTER challenge RAND=" << wRAND;
-			*RAND = wRAND;
-			osip_message_free(msg);
-			osip_message_free(reg);
-			return cksn;
-		    } else {
-			LOG(DEBUG) << "REGISTER fail [" << wRAND << "]-- unauthorized";
-			return 401;
-		    }
+		int cksn = osip_extract(msg, 401, RAND, 32);
+		if (cksn < 8) {// if rand is included on 401 unauthorized, then the challenge-response game is afoot
+		    LOG(INFO) << "REGISTER " << cksn << " challenge RAND=" << *RAND;
+		    return cksn;
+		} else {
+		    LOG(DEBUG) << "REGISTER fail: unauthorized";
+		    return 401;
 		}
-		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
-		if (status >= 200) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
 	}
 
 	if (!msg) {
@@ -336,7 +318,6 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 	}
 
 	osip_message_free(reg);
-	osip_message_free(msg);
 	gSIPInterface.removeCall(mCallID);
 	return 666;
 }
