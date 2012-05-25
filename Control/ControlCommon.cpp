@@ -62,9 +62,9 @@ L3Message* getMessageCore(LogicalChannel *LCH, unsigned SAPI)
     }
 
 	unsigned timeout_ms = LCH->N200() * T200ms;
-	L3Frame *rcv = LCH->recv(timeout_ms,SAPI);
-	if (rcv==NULL) {
-		LOG(NOTICE) << "timeout";
+	L3Frame *rcv = LCH->recv(timeout_ms, SAPI);
+	if (rcv == NULL) {
+	    LOG(NOTICE) << LCH->type() << " timeout " << timeout_ms << " ms expired on SAP"<<SAPI;
 		throw ChannelReadTimeout();
 	}
 	LOG(DEBUG) << "received " << *rcv;
@@ -132,7 +132,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 
     // Did we get a RAND for challenge-response?
     if (RAND.length() != 0) {
-	LOG(INFO) << "sending " << RAND << " to mobile";
+	LOG(INFO) << "sending " << RAND << " to IMSI "<< IMSI << " over " << LCH->type();
 	uint64_t uRAND;
 	uint64_t lRAND;
 	gSubscriberRegistry.stringToUint(RAND, &uRAND, &lRAND);
