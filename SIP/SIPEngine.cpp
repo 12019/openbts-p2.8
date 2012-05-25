@@ -295,7 +295,7 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
-		if (status >= 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
+		if (status > 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
 		
 		int ext = osip_extract(msg, 200, Kc, 16);// extrat Kc from response
 		if (ext < 8) {
