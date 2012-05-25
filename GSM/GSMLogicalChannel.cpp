@@ -48,7 +48,6 @@ using namespace GSM;
 
 void LogicalChannel::open()
 {
-	LOG(INFO);
 	if (mSACCH) mSACCH->open();
 	if (mL1) mL1->open();
 	for (int s=0; s<4; s++) {
