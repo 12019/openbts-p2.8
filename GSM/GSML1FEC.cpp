@@ -844,7 +844,7 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	encode();		 // Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
-	encrypt();
+//	encrypt();
 	transmit();	      // Send the bursts to the radio, GSM 05.03 4.1.5.
 }
 
@@ -895,9 +895,11 @@ void XCCHL1Encoder::transmit()
 	for (int B = 0; B < 4; B++) {
 	    mBurst.time(mNextWriteTime);
 	    // Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
-	    OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
+/*	    OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
 	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
-	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);
+	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);*/
+	    mI[B].segment(0,57).copyToSegment(mBurst,3);
+	    mI[B].segment(57,57).copyToSegment(mBurst,88);
 	    // Send it to the radio.
 	    OBJLOG(DEBUG) << "XCCHL1Encoder mBurst=" << mBurst;
 	    mDownstream->writeHighSide(mBurst);
@@ -954,6 +956,21 @@ void XCCHL1Encoder::encrypt()
     }
 }
 
+void SDCCHL1Encoder::encrypt()
+{
+    for (int B = 0; B < 4; B++)
+    {
+	//mE[B]=mI[B]^keyStreamDL;
+	mE[B] = mI[B];
+	if(cipherID) {
+	    LOG(INFO) <<"applying gamma for " << cipherID;
+	    ubit_t gamma[114];
+	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
+	    mE[B].xor_apply(gamma, 114);
+	}
+    }
+}
+
 void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 {
 	OBJLOG(DEBUG) << "SDCCHL1Encoder " << frame;
@@ -977,6 +994,7 @@ void SDCCHL1Encoder::sendFrame(const L2Frame& frame)
 	LOG(DEBUG) << "SDCCHL1ENCODER ENCODED";
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
 	LOG(DEBUG) << "SDCCHL1ENCODER INTERLEAVED";
+	encrypt();
 	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
 	LOG(DEBUG) << "SDCCHL1ENCODER TRANSMITTED";
 	// FIXME: is this FN OK, or do we need to back it up by 4?
@@ -1524,6 +1542,7 @@ void TCHFACCHL1Encoder::dispatch()
 	// Interleave c[] to i[].
 	interleave(mOffset);
 
+    encrypt();
 	// "mapping on a burst"
 	// Map c[] into outgoing normal bursts, marking stealing flags as needed.
 	// GMS 05.03 3.1.4.
@@ -1654,6 +1673,18 @@ void SACCHL1Encoder::setPhy(float wRSSI, float wTimingError)
 	OBJLOG(DEBUG) << "SACCHL1Encoder timingError=" << timingError  << " actual=" << actualTiming << " ordered=" << mOrderedMSTiming;
 }
 
+void TCHFACCHL1Encoder::encrypt()
+{
+    for (int B = 0; B < 8; B++) {
+	mE[B] = mI[B];
+	if(cipherID) {
+	    LOG(INFO) <<"applying gamma for " << cipherID;
+	    ubit_t gamma[114];
+	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
+	    mE[B].xor_apply(gamma, 114);
+	}
+    }
+}
 
 void SACCHL1Encoder::setPhy(const SACCHL1Encoder& other)
 {// Used to initialize a new SACCH L1 phy parameters

@@ -730,6 +730,7 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 
 	/**@name FEC signal processing state.  */
 	//@{
+	BitVector mE[4];
 	//@}
 //	Thread mEncoderThread;
 //	friend void SDCCHL1EncoderRoutine( SDCCHL1Encoder * encoder );
@@ -740,6 +741,7 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 		const TDMAMapping& wMapping,
 		L1FEC* wParent);
 
+	void encrypt();
 	/** Extend open() to set up semaphores. */
 //	void open();
 
@@ -819,6 +821,7 @@ protected:
 	*/
 	void dispatch();
 
+	virtual void encrypt();
 	/** Will start the dispatch thread. */
 	void start();
 
@@ -836,8 +839,8 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 
 	protected:
 
-    SoftVector mE[8];	///< decrypting history, 8 blocks instead of 4
-	SoftVector mI[8];	///< deinterleaving history, 8 blocks instead of 4
+        SoftVector mE[8];	///< decrypting history, 8 blocks instead of 4
+        SoftVector mI[8];	///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;					///< u[] (uncoded) in the spec
 	BitVector mTCHD;					///< d[] (data) in the spec
 	SoftVector mClass1_c;				///< the class 1 part of c[]
