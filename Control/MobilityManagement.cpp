@@ -206,7 +206,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		} 
 
 		//query subscriber registry for old imei, update if neccessary
-
+/* FIXME - temporarily disabled due to sqlite errors
 		string old_imei = gSubscriberRegistry.imsiGet(name, "hardware");
 		
 		//if we have a new imei and either there's no old one, or it is different...
@@ -219,7 +219,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 				LOG(INFO) << "SR hardware update problem";
 			}
 		}
-		delete msg;
+*/		delete msg;
 	}
 
 	// Query for classmark?
@@ -296,7 +296,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 				"Control.LUR.OpenRegistration.ShortCode", IMSI, DCCH);
 		}
 		// set unix time of most recent registration
-		gSubscriberRegistry.setRegTime(name.c_str());
+//		gSubscriberRegistry.setRegTime(name.c_str()); //FIXME - temporarily disabled due to sqlite errors
 	}
 
 	// Release the channel and return.
