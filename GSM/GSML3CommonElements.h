@@ -266,14 +266,12 @@ class L3CipheringKeySequenceNumber : public L3ProtocolElement {
 	unsigned mCIValue;
 
 	public:
+// default to no-key value
+	L3CipheringKeySequenceNumber(unsigned wCIValue = 7) : mCIValue(wCIValue) {}
 
-	L3CipheringKeySequenceNumber(unsigned wCIValue):
-		mCIValue(wCIValue)
-	{ }
-
-	size_t lengthV() const { return 0; }
+	size_t lengthV() const { return 4; }
 	void writeV(L3Frame&, size_t&) const;
-	void parseV(const L3Frame &, size_t &) { assert(0); }
+	void parseV(const L3Frame &, size_t &);
 	void parseV(const L3Frame&, size_t&, size_t) { assert(0); }
 	void text(std::ostream&) const;
 };

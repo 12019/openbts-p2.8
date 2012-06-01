@@ -235,8 +235,6 @@ void L3MobileIdentity::text(ostream& os) const
 	os << mDigits;
 }
 
-
-
 void L3MobileStationClassmark1::parseV(const L3Frame& src, size_t& rp)
 {
 	rp++;	// spare
@@ -348,11 +346,14 @@ void L3MobileStationClassmark3::text(ostream& os) const
 }
 
 
-
+void L3CipheringKeySequenceNumber::parseV(const L3Frame & src, size_t & rp)
+{
+    mCIValue = src.readField(rp, 4);
+}
 
 void L3CipheringKeySequenceNumber::writeV(L3Frame &dest, size_t& wp) const
 {
-	dest.writeField(wp,mCIValue,4);
+	dest.writeField(wp, mCIValue, 4);
 }
 
 void L3CipheringKeySequenceNumber::text(ostream& os) const
