@@ -80,9 +80,10 @@ void L3RejectCause::text(ostream& os) const
 	os <<"0x"<< hex << mRejectCause << dec;	
 }
 
-
-
-
+void L3RejectCause::parseV(const L3Frame & src, size_t & rp)
+{
+    mRejectCause = src.readField(rp, 8);
+}
 
 void L3NetworkName::writeV(L3Frame& dest, size_t &wp) const
 {
