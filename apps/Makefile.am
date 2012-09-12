@@ -23,7 +23,6 @@ include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
 AM_CXXFLAGS = -Wall -ldl -pthread
-AM_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LIBOSMOGSM_LIBS)
 
 noinst_PROGRAMS = \
 	OpenBTS
@@ -41,6 +40,8 @@ OpenBTS_LDADD = \
 	$(SQLITE_LA) \
 	$(SMS_LA) \
 	$(OSIP_LIBS) \
+	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOGSM_LIBS) \
 	$(ORTP_LIBS)
 
 EXTRA_DIST = \
