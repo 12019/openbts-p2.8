@@ -208,11 +208,11 @@ public:
 	bool setKc(const char * key);
 
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default
-	    assert(mL1); mL1->activateEncryption(i); 
+	    if (mL1) mL1->activateEncryption(i); 
 	}
 
 	void activateDecryption(unsigned i = 1) { // use A5/1 by default
-	    assert(mL1); mL1->activateDecryption(i); 
+	    if (mL1) mL1->activateDecryption(i); 
 	}
 
 	/** The TDMA parameters for the transmit side. */
