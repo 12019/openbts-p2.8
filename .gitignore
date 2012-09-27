@@ -65,6 +65,8 @@ apps/transceiver
 CommonLibs/exampleconfig.db
 ChannelTable.db
 TMSITable.db
+apps/sqlite3dir/
+apps/etc/
 
 # Temporary/Backup files
 *.*~
