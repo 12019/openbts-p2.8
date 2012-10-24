@@ -24,7 +24,7 @@
 */
 
 #include "rnrad1.h"
-
+#include <unistd.h>
 #include "ad9862.h"
 
 using namespace ad9862;

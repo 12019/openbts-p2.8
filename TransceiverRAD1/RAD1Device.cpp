@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include "Threads.h"
 #include "RAD1Device.h"
-
+#include <unistd.h>
 #include <Logger.h>
 
 

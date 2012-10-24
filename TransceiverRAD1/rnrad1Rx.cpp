@@ -24,7 +24,7 @@
 */
 
 #include "rnrad1.h"
-
+#include <unistd.h>
 using namespace ad9862;
 
 rnrad1Rx::rnrad1Rx (int whichBoard,

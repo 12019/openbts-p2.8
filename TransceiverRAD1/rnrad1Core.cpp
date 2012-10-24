@@ -28,7 +28,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
+#include <unistd.h>
 #include "fpga_regs.h"
 #include <stdexcept>
 #include <assert.h>
@@ -429,7 +429,7 @@ rad1LoadStatus rad1LoadFirmwareNth (int nth, const char *filename, bool force, l
 
   unsigned char file_hash[RAD1_HASH_SIZE];
   unsigned char rad1_hash[RAD1_HASH_SIZE];
-
+/*
   if (access (filename, R_OK) != 0){
     perror (filename);
     s = ULS_ERROR;
@@ -446,7 +446,7 @@ rad1LoadStatus rad1LoadFirmwareNth (int nth, const char *filename, bool force, l
     s = ULS_ERROR;
   else
     s = ULS_OK;
-
+*/
   libusb_close(udh);
 
   switch (s){
