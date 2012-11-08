@@ -38,6 +38,7 @@
 
 #include <GSMConfig.h>
 #include <GSMLogicalChannel.h>
+#include <GSML3MMElements.h>
 #include <ControlCommon.h>
 #include <TransactionTable.h>
 #include <TRXManager.h>
@@ -248,7 +249,7 @@ int dumpTMSIs(const char* filename)
 	fileout.open(filename, ios::out); // erases existing!
 	// FIXME -- Check that the file really opened.
 	// Fake an argument list to call printTMSIs.
-	char* subargv[] = {"tmsis", NULL};
+	char* subargv[] = {(char *)"tmsis", NULL};
 	int subargc = 1;
 	return tmsis(subargc, subargv, fileout);
 }
@@ -284,14 +285,12 @@ int tmsis(int argc, char** argv, ostream& os)
 
 int isIMSI(const char *imsi)
 {
-	int i = 0;
-
 	if (!imsi)
 		return 0;
 	if (strlen(imsi) != 15)
 		return 0;
 	
-	for (i = 0; i < strlen(imsi); i++) {
+	for (size_t i = 0; i < strlen(imsi); i++) {
 		if (!isdigit(imsi[i]))
 			return 0;
 	}
@@ -325,11 +324,11 @@ int sendsimple(int argc, char** argv, ostream& os)
 		"To: sip:IMSI%s@127.0.0.1\n"
 		"Call-ID: %x@127.0.0.1:%d\n"
 		"CSeq: 1 MESSAGE\n"
-		"Content-Type: text/plain\nContent-Length: %u\n"
+		"Content-Type: text/plain\nContent-Length: %zu\n"
 		"\n%s\n";
 	static char buffer[1500];
 	snprintf(buffer,1499,form,
-		IMSI, (unsigned)random(), srcAddr,srcAddr,sock.port(),(unsigned)random(), IMSI, (unsigned)random(),sock.port(), strlen(txtBuf), txtBuf);
+		IMSI, (unsigned)random(), srcAddr,srcAddr,sock.port(), (unsigned)random(), IMSI, (unsigned)random(), sock.port(), strlen(txtBuf), txtBuf);
 	sock.write(buffer);
 
 	os << "message submitted for delivery" << endl;
@@ -733,6 +732,37 @@ int power(int argc, char **argv, ostream& os)
 	return SUCCESS;
 }
 
+int getkc(int argc, char** argv, ostream& os)
+{
+    if (argc != 2) return BAD_NUM_ARGS;
+    char * IMSI = argv[1];
+    if (strnlen(IMSI, 32) > 15) {
+	os << IMSI << " is not a valid IMSI" << endl;
+	return BAD_VALUE;
+    }
+    os << "IMSI "<< IMSI << " Kc number " << gTMSITable.get_cksn(IMSI) << " is " << gTMSITable.getKc(IMSI) << endl;
+    return SUCCESS;
+}
+
+int testauth(int argc, char** argv, ostream& os)
+{
+    if (argc != 2 && argc != 3) return BAD_NUM_ARGS;
+
+    char * IMSI = argv[1];
+    if (strnlen(IMSI, 32) > 15) {
+      os << IMSI << " is not a valid IMSI" << endl;
+      return BAD_VALUE;
+    }
+
+    uint32_t sres = 0;// use SRES is available
+    //C++ standard guarantees that unsigned long is at least 32 bits wide so strtoul is ok
+    if (3 == argc) sres = strtoul(argv[2], NULL, 10);
+
+    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(GSM::L3SRES(sres));
+    GSM::L3MobileIdentity mobID(IMSI);
+    os << "authentication result for " << IMSI << ": " << Control::attemptAuth(mobID, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
+    return SUCCESS;
+}
 
 int rxgain(int argc, char** argv, ostream& os)
 {
@@ -785,6 +815,8 @@ void Parser::addCommands()
 	addCommand("page", page, "[IMSI time] -- dump the paging table or page the given IMSI for the given period");
 	addCommand("chans", chans, "-- report PHY status for active channels");
 	addCommand("power", power, "[minAtten maxAtten] -- report current attentuation or set min/max bounds");
+	addCommand("testauth", testauth, "<IMSI> [SRES] -- perform test authentication against for IMSI (using optional SRES) against backend");
+	addCommand("getkc", getkc, "<IMSI> -- obtain encryption key Kc and its sequence number if possible");
         addCommand("rxgain", rxgain, "[newRxgain] -- get/set the RX gain in dB");
         addCommand("noise", noise, "-- report receive noise level in RSSI dB");
 	addCommand("unconfig", unconfig, "key -- remove a config value");
