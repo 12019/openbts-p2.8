@@ -32,7 +32,9 @@
 #include "SMSControl.h"
 #include "CallControl.h"
 #include "RRLPServer.h"
-
+extern "C" {
+#include <osmocom/gsm/comp128.h>
+}
 #include <GSMLogicalChannel.h>
 #include <GSML3RRMessages.h>
 #include <GSML3MMMessages.h>
@@ -165,25 +167,14 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	unsigned newTMSI = 0;
 	if (!preexistingTMSI) newTMSI = gTMSITable.assign(IMSI,lur);
 
+	string name = "IMSI" + string(IMSI);
+
 	// Try to register the IMSI.
 	// This will be set true if registration succeeded in the SIP world.
-	bool success = false;
-	try {
-		SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(),IMSI);
-		LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
-		success = engine.Register(SIPEngine::SIPRegister); 
-	}
-	catch(SIPTimeout) {
-		LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
-		// Reject with a "network failure" cause code, 0x11.
-		DCCH->send(L3LocationUpdatingReject(0x11));
-		// HACK -- wait long enough for a response
-		// FIXME -- Why are we doing this?
-		sleep(4);
-		// Release the channel and return.
-		DCCH->send(L3ChannelRelease());
-		return;
-	}
+	LOG(INFO) << "Trying to authenticate " << name << "..." << endl;
+	unsigned auth_result = attemptAuth(mobileID, DCCH);
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
+	bool success = !(bool)auth_result;
 
 	// This allows us to configure Open Registration
 	bool openRegistration = false;
@@ -219,7 +210,6 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		} 
 
 		//query subscriber registry for old imei, update if neccessary
-		string name = string("IMSI") + IMSI;
 		string old_imei = gSubscriberRegistry.imsiGet(name, "hardware");
 		
 		//if we have a new imei and either there's no old one, or it is different...
@@ -271,11 +261,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// Otherwise, we are here because of open registration.
 	// Either way, we're going to register a phone if we arrive here.
 
-	if (success) {
-		LOG(INFO) << "registration SUCCESS: " << mobileID;
-	} else {
-		LOG(INFO) << "registration ALLOWED: " << mobileID;
-	}
+	LOG(INFO) << "registering " << mobileID << " auth: " << success << " openRegistration: " << openRegistration;
 
 
 	// Send the "short name" and time-of-day.

@@ -98,6 +98,11 @@ class TMSITable {
 	/** Set the classmark. */
 	bool classmark(const char* IMSI, const GSM::L3MobileStationClassmark2& classmark);
 
+	// Set and get the Kc value with appropriate sequence number.
+	bool setKc(const char * IMSI, const char * Kc, unsigned cksn);
+	char * getKc(const char * IMSI) const;
+	unsigned get_cksn(const char * IMSI) const;
+
 	/** Get the next TI value to use for this IMSI or TMSI. */
 	unsigned nextL3TI(const char* IMSI);
 

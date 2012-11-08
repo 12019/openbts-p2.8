@@ -53,7 +53,7 @@ void EmergencyCall(const GSM::L3CMServiceRequest*, GSM::LogicalChannel*);
 /**@name MTC */
 //@{
 /** Run the MTC to the point of alerting, doing early assignment if needed. */
-void MTCStarter(TransactionEntry*, GSM::LogicalChannel*);
+void MTCStarter(TransactionEntry*, GSM::LogicalChannel*, GSM::L3MobileIdentity mobID);
 /** Complete the MTC connection. */
 void MTCController(TransactionEntry*, GSM::TCHFACCHLogicalChannel*);
 //@}

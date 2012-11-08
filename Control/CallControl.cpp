@@ -748,6 +748,9 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// For now, we are assuming that the phone won't make a call if it didn't
 	// get registered.
 
+	LOG(INFO) << "Trying to athenticate caller..." << endl;
+	unsigned auth_result = attemptAuth(mobileID, LCH);
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	if (!veryEarly) {
@@ -857,18 +860,22 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 		GSM::L3Message *msg_ack = getMessage(LCH);
 		const GSM::L3ChannelModeModifyAcknowledge *ack =
 			dynamic_cast<GSM::L3ChannelModeModifyAcknowledge*>(msg_ack);
+		const GSM::L3MMStatus * mm_status = NULL;
 		if (!ack) {
 			// FIXME -- We need this in a loop calling the GSM disptach function.
+		    mm_status = dynamic_cast<GSM::L3MMStatus*>(msg_ack);
+		    if (!mm_status) {
 			if (msg_ack) {
-				LOG(WARNING) << "Unexpected message " << *msg_ack;
-				delete msg_ack;
+			    LOG(WARNING) << "Unexpected message " << *msg_ack;
+			    delete msg_ack;
 			}
 			throw UnexpectedMessage(transaction->ID());
+		    }
 		}
 		// Cause 0x06 is "channel unacceptable"
 		bool modeOK = (ack->mode()==mode);
 		delete msg_ack;
-		if (!modeOK) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
+		if (!modeOK && !mm_status) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
 		MOCController(transaction,dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
 	} else {
 		// For late assignment, send the TCH assignment now.
@@ -1004,7 +1011,7 @@ void Control::MOCController(TransactionEntry *transaction, GSM::TCHFACCHLogicalC
 
 
 
-void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH)
+void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH, GSM::L3MobileIdentity mobID)
 {
 	assert(LCH);
 	LOG(INFO) << "MTC on " << LCH->type() << " transaction: "<< *transaction;
@@ -1037,6 +1044,9 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	unsigned L3TI = transaction->L3TI();
 	assert(L3TI<7);
 
+	LOG(INFO) << "Trying to athenticate callee..." << endl;
+	unsigned auth_result = attemptAuth(mobID, LCH);
+	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
 	// GSM 04.08 5.2.2.1
 	LOG(INFO) << "sending GSM Setup to call " << transaction->calling();
 	LCH->send(GSM::L3Setup(L3TI,GSM::L3CallingPartyBCDNumber(transaction->calling())));
