@@ -63,6 +63,15 @@ void LogicalChannel::open()
 	}
 }
 
+// set Kc for L1 encoder
+bool LogicalChannel::setKc(const char * key)
+{
+    if (!mL1) return false;
+    uint8_t Kc[8];
+    if(osmo_hexparse(key, Kc, 8) != 8) return false;
+    mL1->setKc(Kc);
+    return true;
+}
 
 void LogicalChannel::connect()
 {

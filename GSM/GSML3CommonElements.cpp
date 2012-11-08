@@ -347,8 +347,10 @@ void L3MobileStationClassmark3::text(ostream& os) const
 	os << " A5/7=" << mA5_4;
 }
 
-
-
+void L3CipheringKeySequenceNumber::parseV(const L3Frame & src, size_t & rp)
+{
+    mCIValue = src.readField(rp, 4);
+}
 
 void L3CipheringKeySequenceNumber::writeV(L3Frame &dest, size_t& wp) const
 {

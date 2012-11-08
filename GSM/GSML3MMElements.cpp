@@ -32,7 +32,9 @@
 #include <time.h>
 #include "GSML3MMElements.h"
 #include <Logger.h>
-
+#include <algorithm>
+#include <cstdlib>
+#include <string>
 
 using namespace std;
 using namespace GSM;
@@ -78,9 +80,10 @@ void L3RejectCause::text(ostream& os) const
 	os <<"0x"<< hex << mRejectCause << dec;	
 }
 
-
-
-
+void L3RejectCause::parseV(const L3Frame & src, size_t & rp)
+{
+    mRejectCause = src.readField(rp, 8);
+}
 
 void L3NetworkName::writeV(L3Frame& dest, size_t &wp) const
 {
@@ -247,5 +250,17 @@ void L3SRES::text(ostream& os) const
 	os << hex << "0x" << mValue << dec;
 }
 
+inline char rnd() {
+    const char * range = "abcdef0123456789";
+    return range[rand() % sizeof(range)];
+}
+
+string L3RAND::getRAND(size_t length)
+{
+    string random;
+    random.reserve(length);
+    generate_n(std::back_inserter(random), length, rnd);
+    return random;
+}
 
 // vim: ts=4 sw=4

@@ -35,7 +35,9 @@
 #include <pthread.h>
 
 #include <iostream>
-
+extern "C" {
+#include <osmocom/core/utils.h>
+}
 #include "GSML1FEC.h"
 #include "GSMSAPMux.h"
 #include "GSML2LAPDm.h"
@@ -205,6 +207,17 @@ public:
 	/** Return true if the channel is active. */
 	bool active() const { assert(mL1); return mL1->active(); }
 
+	// set Kc for L1 encoder
+	bool setKc(const char * key);
+
+	void activateEncryption(unsigned i = 1) { // use A5/1 by default
+	    if (mL1) mL1->activateEncryption(i);
+	}
+
+	void activateDecryption(unsigned i = 1) { // use A5/1 by default
+	    if (mL1) mL1->activateDecryption(i);
+	}
+
 	/** The TDMA parameters for the transmit side. */
 	const TDMAMapping& txMapping() const { assert(mL1); return mL1->txMapping(); }
 
@@ -220,7 +233,7 @@ public:
 	/**@name Channel stats from the physical layer */
 	//@{
 	/** Carrier index. */
-	unsigned CN() const { assert(mL1); return mL1->CN(); }
+	unsigned CN() const { return 0; }
 	/** Slot number. */
 	unsigned TN() const { assert(mL1); return mL1->TN(); }
 	/** Receive FER. */
@@ -305,6 +318,22 @@ class SDCCHLogicalChannel : public LogicalChannel {
 
 
 
+/* Logical channel for authentication testing:
+    - no actual tramsmission happens
+    - calls always succeed
+*/
+class AuthTestLogicalChannel : public LogicalChannel {
+    private:
+	L3SRES atSRES;
+    public:
+	AuthTestLogicalChannel(L3SRES s) { atSRES = L3SRES(s.value()); }
+	void send(const L3Frame& frame, unsigned SAPI=0) {}
+// Needed for special handling inside Control::getMessage(LCH);
+	ChannelType type() const { return AuthTestLCHType; }
+	L3SRES getSRES() const { return atSRES; }
+// This will be interpreted as "Ciphering Error" by authentication routine
+	L3Frame * recv(unsigned timeout_ms = 15000, unsigned SAPI = 0) { return NULL; }
+};
 
 
 /**
