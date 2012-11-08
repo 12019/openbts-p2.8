@@ -244,9 +244,23 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteDomain = string(origHost);
 }
 
+int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned length)
+{//extract 'length' bytes from oSIP message with code 'status', return extracted success (<8) or error code (>9)
+	if (msg->status_code != status) return 10;
+	osip_authentication_info_t * auth_info;
+	osip_message_get_authentication_info(msg, 0, &auth_info);
+	if (NULL == auth_info) return 11;
+	char * qop = osip_authentication_info_get_qop_options(auth_info);
+	char * key = osip_authentication_info_get_rspauth(auth_info);
+	int ret = atoi(qop); // helps to avoid curruption after osip_message_free(msg)
+	if (NULL == qop or NULL == key) return 12;
+	*data = string(key + 1, length);
+	osip_message_free(msg); // only cleanup if extraction succeed
+	return ret;
+}
 
-bool SIPEngine::Register( Method wMethod )
-{
+int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
+{// return CKSN or error code, 200==OK
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
 	// Before start, need to add mCallID
@@ -255,7 +269,7 @@ bool SIPEngine::Register( Method wMethod )
 	// Initial configuration for sip message.
 	// Make a new from tag and new branch.
 	// make new mCSeq.
-	
+
 	// Generate SIP Message 
 	// Either a register or unregister. Only difference 
 	// is expiration period.
@@ -265,14 +279,16 @@ bool SIPEngine::Register( Method wMethod )
 			60*gConfig.getNum("SIP.RegistrationPeriod"),
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
-			mViaBranch.c_str(), mCallID.c_str(), mCSeq
+			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
+			RAND, IMSI, SRES
 		); 
 	} else if (wMethod == SIPUnregister ) {
 		reg = sip_register( mSIPUsername.c_str(), 
 			0,
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
-			mViaBranch.c_str(), mCallID.c_str(), mCSeq
+			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
+			NULL, NULL, NULL
 		);
 	} else { assert(0); }
  
@@ -296,23 +312,21 @@ bool SIPEngine::Register( Method wMethod )
 		assert(msg);
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
-		// specific status
-		if (status==200) {
-			LOG(INFO) << "REGISTER success";
-			success = true;
-			break;
+		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
+		if (status > 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
+
+		int ext = osip_extract(msg, 200, Kc, 16);// extrat Kc from response
+		if (ext < 8) {
+		    LOG(INFO) << "REGISTER success: found " << ext << " in response: " << *Kc;
+		    return 200;//success
 		}
-		if (status==401) {
-			LOG(INFO) << "REGISTER fail -- unauthorized";
-			break;
-		}
-		if (status==404) {
-			LOG(INFO) << "REGISTER fail -- not found";
-			break;
-		}
-		if (status>=200) {
-			LOG(NOTICE) << "REGISTER unexpected response " << status;
-			break;
+		int cksn = osip_extract(msg, 401, RAND, 32);
+		if (cksn < 8) {// if rand is included on 401 unauthorized, then the challenge-response game is afoot
+		    LOG(INFO) << "REGISTER " << cksn << " challenge RAND=" << *RAND;
+		    return cksn;
+		} else {
+		    LOG(DEBUG) << "REGISTER fail: unauthorized";
+		    return 401;
 		}
 	}
 
@@ -323,8 +337,8 @@ bool SIPEngine::Register( Method wMethod )
 
 	osip_message_free(reg);
 	osip_message_free(msg);
-	gSIPInterface.removeCall(mCallID);	
-	return success;
+	gSIPInterface.removeCall(mCallID);
+	return 666;
 }
 
 
