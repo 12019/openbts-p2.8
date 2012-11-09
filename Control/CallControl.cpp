@@ -456,6 +456,20 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 		return false;
 	}
 
+	// MM Status - GSM 04.08, part 4.6
+	// If we get this message, is is probably carrying an error code.
+	if (const GSM::L3MMStatus* mm_status = dynamic_cast<const GSM::L3MMStatus*>(message)) {
+	    LOG(NOTICE) << "unsolicited MM status message: " << *mm_status << " from " << transaction->subscriber();
+	    return false; // FIXME - probably we should check actual cause and terminate call in some cases
+	}
+
+	// Channel Modify ACK
+	if (const GSM::L3ChannelModeModifyAcknowledge* mod_ack = dynamic_cast<const GSM::L3ChannelModeModifyAcknowledge*>(message)) {
+	    LOG(INFO) << "GSM ChannelModify Acknowledge from " << transaction->subscriber() << ": " << mod_ack;
+	    MOCController(transaction, dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
+	    return false;
+	}
+
 //#if 0
 
 //This needs to work, but putting it in causes heap corruption.
@@ -856,36 +870,18 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	if (veryEarly) {
 		// For very early assignment, we need a mode change.
 		static const GSM::L3ChannelMode mode(GSM::L3ChannelMode::SpeechV1);
-		LCH->send(GSM::L3ChannelModeModify(LCH->channelDescription(),mode));
+		LCH->send(GSM::L3ChannelModeModify(LCH->channelDescription(), mode));
 		GSM::L3Message *msg_ack = getMessage(LCH);
-		const GSM::L3ChannelModeModifyAcknowledge *ack =
-			dynamic_cast<GSM::L3ChannelModeModifyAcknowledge*>(msg_ack);
-		const GSM::L3MMStatus * mm_status = NULL;
-		if (!ack) {
-			// FIXME -- We need this in a loop calling the GSM disptach function.
-		    mm_status = dynamic_cast<GSM::L3MMStatus*>(msg_ack);
-		    if (!mm_status) {
-			if (msg_ack) {
-			    LOG(WARNING) << "Unexpected message " << *msg_ack;
-			    delete msg_ack;
-			}
-			throw UnexpectedMessage(transaction->ID());
-		    } else {
-			LOG(WARNING) << "MM Status: " << *mm_status;
-		    }
-		}
-		// Cause 0x06 is "channel unacceptable"
-		bool modeOK = false;
-		if (ack) {
-		    modeOK = (ack->mode() == mode);
-		    delete msg_ack;
-		}
-		if (!modeOK && !mm_status) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
-		MOCController(transaction,dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
+		// FIXME: loop until ACK or unrecoverable error?
+		bool call_cleared = callManagementDispatchGSM(transaction, LCH, msg_ack);
+
+		if (msg_ack) delete msg_ack;
+		if (call_cleared) return abortAndRemoveCall(transaction, LCH, GSM::L3Cause(0x06));
+
 	} else {
 		// For late assignment, send the TCH assignment now.
 		// This dispatcher on the next channel will continue the transaction.
-		assignTCHF(transaction,LCH,TCH);
+		assignTCHF(transaction, LCH, TCH);
 	}
 }
 
