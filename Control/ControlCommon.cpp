@@ -192,14 +192,14 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		LCH->send(GSM::L3CipheringModeCommand());
 		LOG(INFO) << "Ciphering Mode Command sent, activating decryption.";
 		LCH->activateDecryption();
-		L3Frame* resp = LCH->recv();
-		LOG(INFO) << "Received";
-		if(!resp) { LOG(ERR) << "Ciphering Error"; }
+		L3Message* mc_msg = getMessage(LCH);
+		L3CipheringModeComplete *mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
+		if(!mode_compl) { LOG(ERR) << "Ciphering Failure: " << mc_msg; return 5; }
 		else {
-		    LOG(INFO) << *resp << " Responce received, activating encryption.";
+		    LOG(INFO) << *mode_compl << " Responce received, activating encryption.";
 		    LCH->activateEncryption();
 		}
-		delete resp;
+		if (mc_msg) delete mc_msg;
 		return 0;
 	    }
 	    LOG(ERR) << "Failed to set Kc=" << Kc << " for IMSI=" << IMSI << " in TMSI table.";
