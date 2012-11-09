@@ -870,11 +870,16 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 			    delete msg_ack;
 			}
 			throw UnexpectedMessage(transaction->ID());
+		    } else {
+			LOG(WARNING) << "MM Status: " << *mm_status;
 		    }
 		}
 		// Cause 0x06 is "channel unacceptable"
-		bool modeOK = (ack->mode()==mode);
-		delete msg_ack;
+		bool modeOK = false;
+		if (ack) {
+		    modeOK = (ack->mode() == mode);
+		    delete msg_ack;
+		}
 		if (!modeOK && !mm_status) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
 		MOCController(transaction,dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
 	} else {
