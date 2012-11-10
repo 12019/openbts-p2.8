@@ -250,8 +250,8 @@ size_t L3PagingResponse::l2BodyLength() const
 
 void L3PagingResponse::parseBody(const L3Frame& src, size_t &rp)
 {
-	// THIS CODE IS CORRECT.  DON'T CHANGE IT. -- DAB
-	rp += 8;	 // FIXME: skip cipher key seq # and spare half octet
+	mCKSN.parseLV(src,rp);
+	rp += 4;	 // skip spare half octet
 	// TREAT THIS AS LV!!
 	mClassmark.parseLV(src,rp);
 	// We only care about the mobile ID.
@@ -263,6 +263,7 @@ void L3PagingResponse::text(ostream& os) const
 	L3RRMessage::text(os);
 	os << "mobileID=(" << mMobileID << ")";
 	os << " classmark=(" << mClassmark << ")";
+	os << " CKSN=(" << mCKSN << ")";
 }
 
 void L3CipheringModeCommand::writeBody(L3Frame& dest, size_t &wp) const

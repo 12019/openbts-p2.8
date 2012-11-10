@@ -225,6 +225,7 @@ class L3PagingResponse : public L3RRMessageNRO {
 
 	L3MobileStationClassmark2 mClassmark;
 	L3MobileIdentity mMobileID;
+	L3CipheringKeySequenceNumber mCKSN;
 
 	public:
 
