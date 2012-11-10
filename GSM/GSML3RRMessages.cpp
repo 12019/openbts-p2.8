@@ -251,7 +251,7 @@ size_t L3PagingResponse::l2BodyLength() const
 void L3PagingResponse::parseBody(const L3Frame& src, size_t &rp)
 {
 	// THIS CODE IS CORRECT.  DON'T CHANGE IT. -- DAB
-	rp += 8;			// skip cipher key seq # and spare half octet
+	rp += 8;	 // FIXME: skip cipher key seq # and spare half octet
 	// TREAT THIS AS LV!!
 	mClassmark.parseLV(src,rp);
 	// We only care about the mobile ID.

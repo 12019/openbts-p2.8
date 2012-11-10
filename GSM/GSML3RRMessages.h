@@ -248,13 +248,14 @@ class L3CipheringModeCommand : public L3RRMessageNRO {
 
 	public:
 
-	L3CipheringModeCommand():L3RRMessageNRO() {}
-/*
-void Setting(const L3CipheringSettings& wSetting)
-                { mSetting = wSetting; }
-        void Response(const L3CipheringResponse& wResponse)
-                { mResponse = wResponse; }
-*/
+        L3CipheringModeCommand():L3RRMessageNRO() {}
+	L3CipheringModeCommand(unsigned a5_version):L3RRMessageNRO() {
+	    mSetting = L3CipheringSettings(a5_version ? 1 : 0, a5_version);
+	}
+
+	void Setting(const L3CipheringSettings& wSetting) { mSetting = wSetting; }
+        void Response(const L3CipheringResponse& wResponse) { mResponse = wResponse; }
+
 	int MTI() const { return CipheringModeCommand; }
 	size_t l2BodyLength() const { return 1; }//FIXME: calculate correct value
 	void writeBody(L3Frame& dest, size_t& wp) const;

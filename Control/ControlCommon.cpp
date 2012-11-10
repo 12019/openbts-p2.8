@@ -189,9 +189,9 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	if(200 == reg_code) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
 	    if(gTMSITable.setKc(IMSI, Kc.c_str(), cksn)) {
 		LOG(INFO) << "Ciphering key set for LCH: " << LCH->setKc(Kc.c_str());
-		LCH->send(GSM::L3CipheringModeCommand());
-		LOG(INFO) << "Ciphering Mode Command sent, activating decryption.";
+		LCH->send(GSM::L3CipheringModeCommand(1)); // FIXME: use actual a5/#
 		LCH->activateDecryption();
+		LOG(INFO) << "Decryption activated: Ciphering Mode Command sent over " << LCH; // should be main DCCH
 		L3Message* mc_msg = getMessage(LCH);
 		L3CipheringModeComplete *mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
 		if(!mode_compl) { LOG(ERR) << "Ciphering Failure: " << mc_msg; return 5; }

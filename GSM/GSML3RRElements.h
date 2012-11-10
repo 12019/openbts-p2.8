@@ -146,14 +146,14 @@ class L3CipheringSettings : public L3ProtocolElement {
 
 	public:
 
-	L3CipheringSettings():L3ProtocolElement()
+        L3CipheringSettings():L3ProtocolElement() { mSC = 0; }
+        L3CipheringSettings(bool ciphering, unsigned a5_version):L3ProtocolElement()
 	{
-
-		mSC=0;			                    // Start Ciphering
-		mAlgorithmIdentifier=0;			// A5/1 Algorithm
+	    mSC = ciphering;		                    // Start Ciphering
+	    mAlgorithmIdentifier = a5_version - 1;	   // A5/? Algorithm, counting from 0
 	}
 
-	size_t lengthV() const { return 0; }
+	size_t lengthV() const { return 1; }
 	void writeV(L3Frame& dest, size_t &wp) const;
 	void parseV(const L3Frame&, size_t&) { assert(0); }
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
@@ -171,10 +171,10 @@ class L3CipheringResponse : public L3ProtocolElement {
 	public:
 
     /*FixMe When we Call for the IMEISV, Ciphering Fails*/
-	L3CipheringResponse():L3ProtocolElement(){ mCR=1; }/* Send Cipher Mode Complete without IMEISV */
+	L3CipheringResponse():L3ProtocolElement(){ mCR = 0; }/* Send Cipher Mode Complete without IMEISV */
 
 
-	size_t lengthV() const { return 0; }
+	size_t lengthV() const { return 1; }
 	void writeV(L3Frame& dest, size_t &wp) const;
 	void parseV(const L3Frame&, size_t&) { assert(0); }
 	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
