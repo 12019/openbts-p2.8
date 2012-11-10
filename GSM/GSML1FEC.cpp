@@ -505,7 +505,7 @@ void RACHL1Decoder::writeLowSide(const RxBurst& burst)
 	countGoodFrame();
 	mD.LSB8MSB();
 	unsigned RA = mD.peekField(0,8);
-	OBJLOG(INFO) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time()
+	OBJLOG(DEBUG) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time()
 		<< " with RSSI=" << burst.RSSI() << " timingError=" << burst.timingError();
 	gBTS.channelRequest(new Control::ChannelRequestRecord(RA,burst.time(),burst.RSSI(),burst.timingError()));
 }
@@ -624,7 +624,7 @@ void XCCHL1Decoder::decrypt()
 	    LOG(DEBUG)<< "XCCHL1Decoder decrypt frame number " << FN;
 
 	    if(cipherID) {
-		LOG(INFO) <<"applying gamma for " << cipherID;
+		LOG(INFO) <<"applying gamma for a5/" << cipherID << " for FN " << FN;
 		ubit_t gamma[114];
 		osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
 		mI[B].xor_apply(gamma, 114);
@@ -738,8 +738,7 @@ bool SACCHL1Decoder::processBurst(const RxBurst& inBurst)
 	// Timing error is a float in symbol intervals.
 	mTimingError[mRSSICounter] = inBurst.timingError();
 
-	OBJLOG(INFO) << "SACCHL1Decoder " << " RSSI=" << inBurst.RSSI()
-			<< " timingError=" << inBurst.timingError();
+	OBJLOG(DEBUG) << "SACCHL1Decoder " << " RSSI=" << inBurst.RSSI() << " timingError=" << inBurst.timingError();
 
 	mRSSICounter++;
 	if (mRSSICounter>3) mRSSICounter=0;
@@ -864,7 +863,7 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;
 	encode();			// Encode u[] to c[], GSM 05.03 4.1.2 and 4.1.3.
 	interleave();		// Interleave c[] to i[][], GSM 05.03 4.1.4.
-//	encrypt();
+	encrypt();
 	transmit();			// Send the bursts to the radio, GSM 05.03 4.1.5.
 }
 
@@ -916,10 +915,10 @@ void XCCHL1Encoder::transmit()
 		mBurst.time(mNextWriteTime);
 		// Copy in the "encrypted" bits, GSM 05.03 4.1.5, 05.02 5.2.3.
 /*	    OBJLOG(DEBUG) << "XCCHL1Encoder mE["<<B<<"]=" << mE[B];
-	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
-	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);*/
+ */	    mE[B].segment(0, 57).copyToSegment(mBurst, 3);
+	    mE[B].segment(57, 57).copyToSegment(mBurst, 88);/*
 		mI[B].segment(0,57).copyToSegment(mBurst,3);
-		mI[B].segment(57,57).copyToSegment(mBurst,88);
+		mI[B].segment(57,57).copyToSegment(mBurst,88);*/
 		// Send it to the radio.
 		OBJLOG(DEBUG) << "XCCHL1Encoder mBurst=" << mBurst;
 		mDownstream->writeHighSide(mBurst);
@@ -969,10 +968,10 @@ void XCCHL1Encoder::encrypt()
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
 	    mE[B].xor_apply(gamma, 114);
 	}
-	if(mI[B].compare(mE[B])) LOG(NOTICE) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
+	if(mI[B].compare(mE[B])) LOG(DEBUG) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
 	else {
-	    LOG(NOTICE) << "mI[" << B << "]=" << mI[B];
-	    LOG(NOTICE) << "mE[" << B << "]=" << mE[B];
+	    LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
+	    LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
 	}
     }
 }
@@ -984,7 +983,7 @@ void SDCCHL1Encoder::encrypt()
 	//mE[B]=mI[B]^keyStreamDL;
 	mE[B] = mI[B];
 	if(cipherID) {
-	    LOG(INFO) <<"applying gamma for " << cipherID;
+	    LOG(INFO) <<"applying gamma for a5/" << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
 	    mE[B].xor_apply(gamma, 114);
@@ -1688,7 +1687,7 @@ void SACCHL1Decoder::setPhy(float wRSSI, float wTimingError)
 	// Used to initialize L1 phy parameters.
 	for (int i=0; i<4; i++) mRSSI[i]=wRSSI;
 	for (int i=0; i<4; i++) mTimingError[i]=wTimingError;
-	OBJLOG(INFO) << "SACCHL1Decoder RSSI=" << wRSSI << "timingError=" << wTimingError;
+	OBJLOG(DEBUG) << "SACCHL1Decoder RSSI=" << wRSSI << "timingError=" << wTimingError;
 }
 
 void SACCHL1Decoder::setPhy(const SACCHL1Decoder& other)
@@ -1699,7 +1698,7 @@ void SACCHL1Decoder::setPhy(const SACCHL1Decoder& other)
 	mActualMSTiming = other.mActualMSTiming;
 	for (int i=0; i<4; i++) mRSSI[i]=other.mRSSI[i];
 	for (int i=0; i<4; i++) mTimingError[i]=other.mTimingError[i];
-	OBJLOG(INFO) << "SACCHL1Decoder actuals RSSI=" << mRSSI[0] << "timingError=" << mTimingError[0]
+	OBJLOG(DEBUG) << "SACCHL1Decoder actuals RSSI=" << mRSSI[0] << "timingError=" << mTimingError[0]
 		<< " MSPower=" << mActualMSPower << " MSTiming=" << mActualMSTiming;
 }
 
@@ -1721,7 +1720,7 @@ void SACCHL1Encoder::setPhy(float wRSSI, float wTimingError)
 	float minPower = gConfig.getNum("GSM.MS.Power.Min");
 	if (mOrderedMSPower>maxPower) mOrderedMSPower=maxPower;
 	else if (mOrderedMSPower<minPower) mOrderedMSPower=minPower;
-	OBJLOG(INFO) <<"SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget
+	OBJLOG(DEBUG) <<"SACCHL1Encoder RSSI=" << RSSI << " target=" << RSSITarget
 		<< " deltaP=" << deltaP << " actual=" << actualPower << " order=" << mOrderedMSPower;
 	// Timing Advance
 	float timingError = sib.timingError();
@@ -1730,7 +1729,7 @@ void SACCHL1Encoder::setPhy(float wRSSI, float wTimingError)
 	float maxTiming = gConfig.getNum("GSM.MS.TA.Max");
 	if (mOrderedMSTiming<0.0F) mOrderedMSTiming=0.0F;
 	else if (mOrderedMSTiming>maxTiming) mOrderedMSTiming=maxTiming;
-	OBJLOG(INFO) << "SACCHL1Encoder timingError=" << timingError  <<
+	OBJLOG(DEBUG) << "SACCHL1Encoder timingError=" << timingError  <<
 		" actual=" << actualTiming << " ordered=" << mOrderedMSTiming;
 }
 
@@ -1739,7 +1738,7 @@ void TCHFACCHL1Encoder::encrypt()
     for (int B = 0; B < 8; B++) {
 	mE[B] = mI[B];
 	if(cipherID) {
-	    LOG(INFO) <<"applying gamma for " << cipherID;
+	    LOG(INFO) <<"applying gamma for a5/" << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
 	    mE[B].xor_apply(gamma, 114);
@@ -1753,7 +1752,7 @@ void SACCHL1Encoder::setPhy(const SACCHL1Encoder& other)
 	// from those of a preexisting established channel.
 	mOrderedMSPower = other.mOrderedMSPower;
 	mOrderedMSTiming = other.mOrderedMSTiming;
-	OBJLOG(INFO) << "SACCHL1Encoder orders MSPower=" << mOrderedMSPower << " MSTiming=" << mOrderedMSTiming;
+	OBJLOG(DEBUG) << "SACCHL1Encoder orders MSPower=" << mOrderedMSPower << " MSTiming=" << mOrderedMSTiming;
 }
 
 
@@ -1769,7 +1768,7 @@ SACCHL1Encoder::SACCHL1Encoder(unsigned wCN, unsigned wTN, const TDMAMapping& wM
 
 void SACCHL1Encoder::open()
 {
-	OBJLOG(INFO) <<"SACCHL1Encoder";
+	OBJLOG(DEBUG) <<"SACCHL1Encoder";
 	XCCHL1Encoder::open();
 	mOrderedMSPower = 33;
 	mOrderedMSTiming = 0;
@@ -1789,7 +1788,7 @@ SACCHL1Decoder* SACCHL1Encoder::SACCHSibling()
 
 void SACCHL1Encoder::sendFrame(const L2Frame& frame)
 {
-	OBJLOG(INFO) << "SACCHL1Encoder " << frame;
+	OBJLOG(DEBUG) << "SACCHL1Encoder " << frame;
 
 	// Physical header, GSM 04.04 6, 7.1
 	// Power and timing control, GSM 05.08 4, GSM 05.10 5, 6.
@@ -1829,7 +1828,7 @@ void SACCHL1Encoder::sendFrame(const L2Frame& frame)
 	// Write physical header into mU and then call base class.
 
 	// SACCH physical header, GSM 04.04 6.1, 7.1.
-	OBJLOG(INFO) <<"SACCHL1Encoder orders pow=" << mOrderedMSPower << " TA=" << mOrderedMSTiming;
+	OBJLOG(DEBUG) <<"SACCHL1Encoder orders pow=" << mOrderedMSPower << " TA=" << mOrderedMSTiming;
 	mU.fillField(0,encodePower(mOrderedMSPower),8);
 	mU.fillField(8,(int)(mOrderedMSTiming+0.5F),8);	// timing (GSM 04.04 6.1)
 	OBJLOG(DEBUG) << "SACCHL1Encoder phy header " << mU.head(16);

@@ -191,7 +191,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		LOG(INFO) << "Ciphering key set for LCH: " << LCH->setKc(Kc.c_str());
 		LCH->send(GSM::L3CipheringModeCommand(1)); // FIXME: use actual a5/#
 		LCH->activateDecryption();
-		LOG(INFO) << "Decryption activated: Ciphering Mode Command sent over " << LCH; // should be main DCCH
+		LOG(INFO) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type(); // should be main DCCH
 		L3Message* mc_msg = getMessage(LCH);
 		L3CipheringModeComplete *mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
 		if(!mode_compl) { LOG(ERR) << "Ciphering Failure: " << mc_msg; return 5; }
