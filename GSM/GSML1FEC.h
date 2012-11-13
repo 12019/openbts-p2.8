@@ -388,6 +388,7 @@ class L1FEC {
 
 	L1Encoder* mEncoder;
 	L1Decoder* mDecoder;
+	bool encrypting, decrypting;
 
 	public:
 
@@ -395,7 +396,7 @@ class L1FEC {
 		The L1FEC constructor is over-ridden for different channel types.
 		But the default has no encoder or decoder.
 	*/
-	L1FEC():mEncoder(NULL),mDecoder(NULL) {}
+        L1FEC():mEncoder(NULL), mDecoder(NULL), encrypting(false), decrypting(false) {}
 
 	/** This is no-op because these channels should not be destroyed. */
 	virtual ~L1FEC() {};
@@ -461,8 +462,10 @@ class L1FEC {
 	    assert(mDecoder); mDecoder->setKc(Kc);
 	}
 
-	void activateEncryption(unsigned i) { assert(mEncoder); mEncoder->enableEnciphering(i); }
-	void activateDecryption(unsigned i) { assert(mDecoder); mDecoder->enableDeciphering(i); }
+	const bool checkEncryption() { return encrypting; }
+	const bool checkDecryption() { return decrypting; }
+	void activateEncryption(unsigned i) { assert(mEncoder); encrypting = true; mEncoder->enableEnciphering(i); }
+	void activateDecryption(unsigned i) { assert(mDecoder); decrypting = true; mDecoder->enableDeciphering(i); }
 	//@}
 
 

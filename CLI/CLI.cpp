@@ -643,14 +643,21 @@ void printChanInfo(unsigned transID, const GSM::LogicalChannel* chan, ostream& o
 	os << setw(2) << chan->CN() << " " << chan->TN();
 	os << " " << setw(8) << chan->typeAndOffset();
 	os << " " << setw(12) << transID;
-	char buffer[200];
-	snprintf(buffer,199,"%5.2f %4d %5d %4d",
+	char buffer[256];
+	string cipher;
+	switch(chan->getCiphering()) {
+	case 3: cipher = "both"; break;
+	case 2: cipher = "encr"; break;
+	case 1: cipher = "decr"; break;
+	default: cipher = "none";
+	}
+	snprintf(buffer, 254, "%5.2f %4d %5d %4d %s",
 		100.0*chan->FER(), (int)round(chan->RSSI()),
-		chan->actualMSPower(), chan->actualMSTiming());
+		 chan->actualMSPower(), chan->actualMSTiming(), cipher.c_str());
 	os << " " << buffer;
 	const GSM::L3MeasurementResults& meas = chan->SACCH()->measurementResults();
 	if (!meas.MEAS_VALID()) {
-		snprintf(buffer,199,"%5d %5.2f",
+		snprintf(buffer, 254, "%5d %5.2f",
 			meas.RXLEV_FULL_SERVING_CELL_dBm(),
 			100.0*meas.RXQUAL_FULL_SERVING_CELL_BER());
 		os << " " << buffer;
@@ -666,8 +673,8 @@ int chans(int argc, char **argv, ostream& os)
 {
 	if (argc!=1) return BAD_NUM_ARGS;
 
-	os << "CN TN chan      transaction UPFER RSSI TXPWR TXTA DNLEV DNBER" << endl;
-	os << "CN TN type      id          pct    dB   dBm  sym   dBm   pct" << endl;
+	os << "CN TN chan      transaction UPFER RSSI TXPWR TXTA CIPHER DNLEV DNBER" << endl;
+	os << "CN TN type      id          pct    dB   dBm  sym  en/de  dBm   pct " << endl;
 
 	//gPhysStatus.dump(os);
 	//os << endl << "Old data reporting: " << endl;

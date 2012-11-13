@@ -210,6 +210,18 @@ public:
 	// set Kc for L1 encoder
 	bool setKc(const char * key);
 
+	// obtain channel en(de)cryption status if possible
+	const unsigned getCiphering() const {
+	    if (mL1) {
+		bool e = mL1->checkEncryption();
+		bool d = mL1->checkDecryption();
+		if (e && d ) return 3;
+		if (e) return 2;
+		if (d) return 1;
+	    }
+	    return 0;
+	}
+
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default
 	    if (mL1) mL1->activateEncryption(i);
 	}
