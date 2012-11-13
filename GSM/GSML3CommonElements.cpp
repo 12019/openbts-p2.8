@@ -331,11 +331,10 @@ void L3MobileStationClassmark3::parseV(const L3Frame& src, size_t& rp)
 }
 
 void L3MobileStationClassmark3::parseV(const L3Frame& src, size_t& rp, size_t len)
-{
-	// We do this because the parser is incomplete.
+{// FIXME - check sizes
 	size_t frp = rp;
 	parseV(src,frp);
-	rp += len*8;
+	rp += len*4;
 }
 
 void L3MobileStationClassmark3::text(ostream& os) const
@@ -351,6 +350,13 @@ void L3CipheringKeySequenceNumber::parseV(const L3Frame & src, size_t & rp)
 {
     mCIValue = src.readField(rp, 4);
 }
+
+void L3CipheringKeySequenceNumber::parseV(const L3Frame& src, size_t& rp, size_t len) {
+    size_t frp = rp;
+    parseV(src, frp);
+    rp += len*8;
+}
+
 
 void L3CipheringKeySequenceNumber::writeV(L3Frame &dest, size_t& wp) const
 {
