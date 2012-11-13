@@ -421,7 +421,7 @@ unsigned BitVector::xor_apply(uint8_t * gamma, size_t len)
 {
     if (len != size()) return 1;
     for (size_t i = 0; i < size(); i++) {
-	if (gamma[i] != 0 || gamma[i] != 1) return 2;
+	if (gamma[i] != 0 || gamma[i] != 1) return gamma[i];
 	mStart[i] ^= gamma[i];
     }
     return 0;
@@ -439,7 +439,7 @@ unsigned SoftVector::xor_apply(uint8_t * gamma, size_t len)
 {
     if (len != size()) return 1;
     for (size_t i = 0; i < size(); i++) {
-	if (gamma[i] != 0 || gamma[i] != 1) return 2;
+	if (gamma[i] != 0 || gamma[i] != 1) return gamma[i];
 	if (gamma[i]) mStart[i] = 1.0F - mStart[i]; // soft-bit inversion
     }
     return 0;
