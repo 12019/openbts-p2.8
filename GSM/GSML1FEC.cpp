@@ -321,7 +321,8 @@ void L1Encoder::encrypt(BitVector &burst, uint32_t FN) const
 	if (mCipherID) {
 		ubit_t ks[114];
 		osmo_a5(mCipherID, mKc, FN, ks, NULL);
-		if(!burst.xor_apply(ks, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+		unsigned e = burst.xor_apply(ks, 114);
+		if (e) LOG(ERR) << "Length mismatch while applying gamma: " << e;
 	}
 }
 
@@ -415,7 +416,8 @@ void L1Decoder::decrypt(SoftVector &burst, uint32_t FN) const
 	if (mCipherID) {
 		ubit_t ks[114];
 		osmo_a5(mCipherID, mKc, FN, NULL, ks);
-		if(!burst.xor_apply(ks, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+		unsigned e = burst.xor_apply(ks, 114);
+		if (e) LOG(ERR) << "Length mismatch while applying gamma: " << e;
 	}
 }
 
@@ -650,7 +652,7 @@ void XCCHL1Decoder::decrypt()
 		LOG(INFO) << "applying gamma for a5/" << cipherID << " for FN " << FN;
 		ubit_t gamma[114];
 		osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
-		if(!mI[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+		if(mI[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
 	    }
 	    LOG(DEBUG) <<"mI["<< B <<"]: "<< mI[B];
 	    LOG(DEBUG) <<"mE["<< B <<"]: "<< mE[B];
@@ -991,7 +993,7 @@ void XCCHL1Encoder::encrypt()
 	    LOG(INFO) <<"applying gamma for " << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL); // cipherstream for downlink
-	    if(!mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+	    if(mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
 	}
 	if(mI[B].compare(mE[B])) LOG(DEBUG) << "mI[" << B << "]=mE[" <<B <<"]="<< mI[B];
 	else {
@@ -1011,7 +1013,7 @@ void SDCCHL1Encoder::encrypt()
 	    LOG(INFO) <<"applying gamma for a5/" << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
-	    if(!mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+	    if(mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
 	}
     }
 }
@@ -1358,7 +1360,7 @@ void TCHFACCHL1Decoder::decrypt()
 	    LOG(INFO) <<"applying gamma for " << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN, NULL, gamma); // cipherstream for uplink
-	    if(!mI[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+	    if(mI[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
 	}
 	LOG(DEBUG) << "mI[" << B << "]=" << mI[B];
 	LOG(DEBUG) << "mE[" << B << "]=" << mE[B];
@@ -1774,7 +1776,7 @@ void TCHFACCHL1Encoder::encrypt()
 	    LOG(INFO) <<"applying gamma for a5/" << cipherID;
 	    ubit_t gamma[114];
 	    osmo_a5(cipherID, Kc, FN(), gamma, NULL);
-	    if(!mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
+	    if(mE[B].xor_apply(gamma, 114)) LOG(ERR) << "Length mismatch while applying gamma!";
 	}
     }
 }

@@ -298,7 +298,7 @@ class BitVector : public Vector<char> {
 
 	// apply gamma bit sequence (1 bit per byte) using xor function:
 	// return false on non-boolean gamma or length mismatch
-	bool xor_apply(uint8_t * gamma, size_t len);
+	unsigned xor_apply(uint8_t * gamma, size_t len);
 
 	// bitwise comparison
 	bool compare(const BitVector vec);
@@ -418,7 +418,7 @@ class SoftVector: public Vector<float> {
 	// apply gamma bit sequence (1 bit per byte) using xor function:
 	// 1.0-x is the inverse of x soft-bit
 	// return false on non-boolean gamma or length mismatch
-	bool xor_apply(uint8_t * gamma, size_t len);
+	unsigned xor_apply(uint8_t * gamma, size_t len);
 
 	/** Decode soft symbols with the GSM rate-1/2 Viterbi decoder. */
 	void decode(ViterbiR2O4 &decoder, BitVector& target) const;

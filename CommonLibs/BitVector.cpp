@@ -417,14 +417,14 @@ void Parity::writeParityWord(const BitVector& data, BitVector& parityTarget, boo
 	parityTarget.fillField(0,pWord,size());
 }
 
-bool BitVector::xor_apply(uint8_t * gamma, size_t len)
+unsigned BitVector::xor_apply(uint8_t * gamma, size_t len)
 {
-    if (len != size()) return false;
+    if (len != size()) return 1;
     for (size_t i = 0; i < size(); i++) {
-	if (gamma[i] != 0 || gamma[i] != 1) return false;
+	if (gamma[i] != 0 || gamma[i] != 1) return 2;
 	mStart[i] ^= gamma[i];
     }
-    return true;
+    return 0;
 }
 
 bool BitVector::compare(const BitVector vec) {
@@ -435,14 +435,14 @@ bool BitVector::compare(const BitVector vec) {
     return true;
 }
 
-bool SoftVector::xor_apply(uint8_t * gamma, size_t len)
+unsigned SoftVector::xor_apply(uint8_t * gamma, size_t len)
 {
-    if (len != size()) return false;
+    if (len != size()) return 1;
     for (size_t i = 0; i < size(); i++) {
-	if (gamma[i] != 0 || gamma[i] != 1) return false;
+	if (gamma[i] != 0 || gamma[i] != 1) return 2;
 	if (gamma[i]) mStart[i] = 1.0F - mStart[i]; // soft-bit inversion
     }
-    return true;
+    return 0;
 }
 
 
