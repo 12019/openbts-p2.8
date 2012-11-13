@@ -59,8 +59,8 @@ class SACCHL1Encoder;
 class SACCHL1Decoder;
 class SACCHL1FEC;
 class TrafficTranscoder;
-class SDCCHL1Encoder;
-class SDCCHL1FEC;
+//class SDCCHL1Encoder;
+//class SDCCHL1FEC;
 
 
 
@@ -88,8 +88,8 @@ class L1Encoder {
 	ARFCNManager *mDownstream;
 	TxBurst mBurst;					///< a preformatted burst template
 	TxBurst mFillerBurst;			///< the filler burst for this channel
-	uint8_t Kc[8];
-	unsigned cipherID;
+//	uint8_t Kc[8];
+//	unsigned cipherID;
 
 	/**@name Config items that don't change. */
 	//@{
@@ -114,6 +114,11 @@ class L1Encoder {
 	bool mActive;					///< true between open() and close()
 	//@}
 
+	/**@ Cipher state */
+	//@{
+	uint8_t mKc[8];					///< current Kc
+	unsigned mCipherID;				///< current 
+	//@}
 	ViterbiR2O4 mVCoder;	///< nearly all GSM channels use the same convolutional code
 
 	char mDescriptiveString[100];
@@ -146,7 +151,7 @@ class L1Encoder {
 	unsigned CN() const { return mCN; }
 	unsigned TN() const { return mTN; }
 	unsigned TSC() const { return mTSC; }
-	uint32_t FN() const { return mNextWriteTime.FN(); }
+//	uint32_t FN() const { return mNextWriteTime.FN(); }
 	unsigned ARFCN() const;
 	TypeAndOffset typeAndOffset() const;	///< this comes from mMapping
 	//@}
@@ -177,11 +182,16 @@ class L1Encoder {
 
 	const char* descriptiveString() const { return mDescriptiveString; }
 
-	// set Kc for ciphering
-	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); }
+	/**@name Cipher support */
+	//@{
 
-	// enable ciphering if Kc is set
-	void enableEnciphering(unsigned i) { cipherID = i; }
+	/** set Kc for ciphering */
+	void setKc(uint8_t * Kc_key) { memcpy(mKc, Kc_key, 8); }
+
+	/** enable ciphering if Kc is set */
+	void enableEnciphering(unsigned i) { mCipherID = i; }
+
+	//@}
 
 	protected:
 
@@ -206,6 +216,8 @@ class L1Encoder {
 	*/
 	virtual void sendIdleFill();
 
+    /** Encrypt given burst in-place */
+	void encrypt(BitVector &burst, uint32_t FN) const;
 };
 
 
@@ -220,8 +232,8 @@ class L1Decoder {
 	protected:
 
 	SAPMux * mUpstream;
-	uint8_t Kc[8];
-	unsigned cipherID; // algorithm to be used  for encryption: 0 - none, 1 - A5/1, 3 - A5/3 etc
+//	uint8_t Kc[8];
+//	unsigned cipherID; // algorithm to be used  for encryption: 0 - none, 1 - A5/1, 3 - A5/3 etc
 
 	/**@name Mutex-controlled state information. */
 	//@{
@@ -251,6 +263,11 @@ class L1Decoder {
 	L1FEC* mParent;			///< a containing L1 processor, if any
 	//@}
 
+	/**@ Cipher state */
+	//@{
+	uint8_t mKc[8];					///< current Kc
+	unsigned mCipherID;				///< current 
+	//@}
 	ViterbiR2O4 mVCoder;	///< nearly all GSM channels use the same convolutional code
 
 
@@ -269,13 +286,14 @@ class L1Decoder {
 			mRunning(false),
 			mFER(0.0F),
 			mCN(wCN),mTN(wTN),
-			mMapping(wMapping),mParent(wParent)
+			mMapping(wMapping),mParent(wParent),
+			mCipherID(0)
 	{
 		// Start T3101 so that the channel will
 		// become recyclable soon.
 		mT3101.set();
-	    memset(Kc, 0, 8);
-	    cipherID = 0 ;
+//	    memset(Kc, 0, 8);
+//	    cipherID = 0 ;
 	}
 
 
@@ -326,11 +344,16 @@ class L1Decoder {
 	TypeAndOffset typeAndOffset() const;	///< this comes from mMapping
 	//@}
 
-	// set Kc for deciphering
-	void setKc(uint8_t * Kc_key) { memcpy(Kc, Kc_key, 8); }
+	/**@name Cipher support */
+	//@{
 
-	// enable deciphering if Kc is set
-	void enableDeciphering(unsigned i) { cipherID = i; }
+	/** set Kc for ciphering */
+	void setKc(uint8_t * Kc_key) { memcpy(mKc, Kc_key, 8); }
+
+	/** enable ciphering if Kc is set */
+	void enableDeciphering(unsigned i) { mCipherID = i; }
+
+	//@}
 
 	protected:
 
@@ -348,6 +371,8 @@ class L1Decoder {
 	void countGoodFrame();
 
 	void countBadFrame();
+    /* Decrypt burst in-place */
+	void decrypt(SoftVector &burst, uint32_t FN) const;
 };
 
 
@@ -519,14 +544,14 @@ class XCCHL1Decoder : public L1Decoder {
 	/**@name FEC state. */
 	//@{
 	Parity mBlockCoder;
-	SoftVector mE[4];           ///< e[][], as per GSM 05.03 2.2
+//	SoftVector mE[4];           ///< e[][], as per GSM 05.03 2.2
 	SoftVector mI[4];			///< i[][], as per GSM 05.03 2.2
 	SoftVector mC;				///< c[], as per GSM 05.03 2.2
 	BitVector mU;				///< u[], as per GSM 05.03 2.2
 	BitVector mP;				///< p[], as per GSM 05.03 2.2
 	BitVector mDP;				///< d[]:p[] (data & parity)
 	BitVector mD;				///< d[], as per GSM 05.03 2.2
-	uint32_t FN; // Frame Number - required for decryption
+//	uint32_t FN; // Frame Number - required for decryption
 	//@}
 
 	GSM::Time mReadTime;		///< timestamp of the first burst
@@ -558,7 +583,7 @@ class XCCHL1Decoder : public L1Decoder {
 	
 	/* Decrypt
 	*/
-	virtual void decrypt();
+//	virtual void decrypt();
 	/**
 	  Deinterleave the i[] to c[].
 	  This virtual method works for all block-interleaved channels (xCCHs).
@@ -683,7 +708,7 @@ class XCCHL1Encoder : public L1Encoder {
 	//@{
 	Parity mBlockCoder;			///< block coder for this channel
 	BitVector mI[4];			///< i[][], as per GSM 05.03 2.2
-	BitVector mE[4];			///< e[][], as per GSM 05.03 2.2
+//	BitVector mE[4];			///< e[][], as per GSM 05.03 2.2
 	BitVector mC;				///< c[], as per GSM 05.03 2.2
 	BitVector mU;				///< u[], as per GSM 05.03 2.2
 	BitVector mD;				///< d[], as per GSM 05.03 2.2
@@ -715,7 +740,7 @@ class XCCHL1Encoder : public L1Encoder {
 	*/
 	void encode();
 
-	void encrypt();
+//	void encrypt();
 	/**
 	  Interleave c[] to i[].
 	  GSM 05.03 4.1.4.
@@ -732,12 +757,12 @@ class XCCHL1Encoder : public L1Encoder {
 
 };
 
-
+/*
 class SDCCHL1Encoder : public XCCHL1Encoder {
 
 	private:
 
-	/**@name FEC signal processing state.  */
+	//@name FEC signal processing state.  
 	//@{
 	BitVector mE[4];
 	//@}
@@ -754,18 +779,18 @@ class SDCCHL1Encoder : public XCCHL1Encoder {
 
 	protected:
 
-	/** Send a single L2 frame.  */
+	// Send a single L2 frame.  
 	virtual void sendFrame(const L2Frame&);
 
-	/**
-	  Format i[] into timeslots and send them down for transmission.
-	  Set stealing flags assuming a control channel.
-	  Also updates mWriteTime.
-	  GSM 05.03 4.1.5, 05.02 5.2.3.
-	*/
+	//
+	//  Format i[] into timeslots and send them down for transmission.
+	//  Set stealing flags assuming a control channel.
+	//  Also updates mWriteTime.
+	//  GSM 05.03 4.1.5, 05.02 5.2.3.
+	
 	 void transmit();
 };
-
+*/
 
 /** L1 encoder used for full rate TCH and FACCH -- mostry from GSM 05.03 3.1 and 4.2 */
 class TCHFACCHL1Encoder : public XCCHL1Encoder {
@@ -775,7 +800,7 @@ private:
 	bool mPreviousFACCH;	///< A copy of the previous stealing flag state.
 	size_t mOffset;			///< Current deinterleaving offset.
 
-	BitVector mE[8];  ///< decryption history, 8 blocks instead of 4
+//	BitVector mE[8];  ///< decryption history, 8 blocks instead of 4
 	BitVector mI[8];			///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;				///< u[], but for traffic
 	BitVector mTCHD;				///< d[], but for traffic
@@ -822,7 +847,7 @@ protected:
 	*/
 	void dispatch();
 
-	virtual void encrypt();
+//	virtual void encrypt();
 
 	/** Will start the dispatch thread. */
 	void start();
@@ -841,7 +866,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 
 	protected:
 
-    SoftVector mE[8];	///< decrypting history, 8 blocks instead of 4
+//    SoftVector mE[8];	///< decrypting history, 8 blocks instead of 4
 	SoftVector mI[8];	///< deinterleaving history, 8 blocks instead of 4
 	BitVector mTCHU;					///< u[] (uncoded) in the spec
 	BitVector mTCHD;					///< d[] (data) in the spec
@@ -849,7 +874,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 	BitVector mClass1A_d;				///< the class 1A part of d[]
 	SoftVector mClass2_c;				///< the class 2 part of c[]
 
-	uint32_t FN; // Frame Number - required for decryption
+//	uint32_t FN; // Frame Number - required for decryption
 	VocoderFrame mVFrame;				///< unpacking buffer for vocoder frame
 	unsigned char mPrevGoodFrame[33];	///< previous good frame.
 
@@ -877,7 +902,7 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 	bool processBurst( const RxBurst& );
 	
 	/** Decrypt e[] to i[].  */
-	void decrypt();
+//	void decrypt();
 
 	/** Deinterleave i[] to c[].  */
 	void deinterleave(int blockOffset );
