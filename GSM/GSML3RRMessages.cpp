@@ -250,8 +250,9 @@ size_t L3PagingResponse::l2BodyLength() const
 
 void L3PagingResponse::parseBody(const L3Frame& src, size_t &rp)
 {
-	mCKSN.parseLV(src,rp);
 	rp += 4;	 // skip spare half octet
+	mCKSN.parseV(src, rp); // FIXME: double-check order in which to skip spare bits
+	LOG(DEBUG) << "L3PagingResponse::parseBody mCKSN=" << mCKSN;
 	// TREAT THIS AS LV!!
 	mClassmark.parseLV(src,rp);
 	// We only care about the mobile ID.

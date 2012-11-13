@@ -349,14 +349,8 @@ void L3MobileStationClassmark3::text(ostream& os) const
 void L3CipheringKeySequenceNumber::parseV(const L3Frame & src, size_t & rp)
 {
     mCIValue = src.readField(rp, 4);
+    LOG(DEBUG) << "L3CipheringKeySequenceNumber::parseV mCIValue=" << mCIValue;
 }
-
-void L3CipheringKeySequenceNumber::parseV(const L3Frame& src, size_t& rp, size_t len) {
-    size_t frp = rp;
-    parseV(src, frp);
-    rp += len*8;
-}
-
 
 void L3CipheringKeySequenceNumber::writeV(L3Frame &dest, size_t& wp) const
 {

@@ -274,7 +274,7 @@ class L3CipheringKeySequenceNumber : public L3ProtocolElement {
 	size_t lengthV() const { return 4; }
 	void writeV(L3Frame&, size_t&) const;
 	void parseV(const L3Frame &, size_t &);
-	void parseV(const L3Frame&, size_t&, size_t);
+	void parseV(const L3Frame&, size_t&, size_t) {assert(0);};
 	void text(std::ostream&) const;
 };
 
