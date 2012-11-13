@@ -64,6 +64,9 @@ class SACCHLogicalChannel;
 class L3Message;
 class L3RRMessage;
 
+enum ChanCipherState {
+    Encrypting, Decrypting, EncryptingAndDecrypting, NoCipher
+};
 
 /**
 	A complete logical channel.
@@ -211,15 +214,15 @@ public:
 	bool setKc(const char * key);
 
 	// obtain channel en(de)cryption status if possible
-	const unsigned getCiphering() const {
+	const ChanCipherState getCiphering() const {
 	    if (mL1) {
 		bool e = mL1->checkEncryption();
 		bool d = mL1->checkDecryption();
-		if (e && d ) return 3;
-		if (e) return 2;
-		if (d) return 1;
+		if (e && d ) return EncryptingAndDecrypting;
+		if (e) return Encrypting;
+		if (d) return Decrypting;
 	    }
-	    return 0;
+	    return NoCipher;
 	}
 
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default

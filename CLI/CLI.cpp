@@ -646,9 +646,9 @@ void printChanInfo(unsigned transID, const GSM::LogicalChannel* chan, ostream& o
 	char buffer[256];
 	string cipher;
 	switch(chan->getCiphering()) {
-	case 3: cipher = "both"; break;
-	case 2: cipher = "encr"; break;
-	case 1: cipher = "decr"; break;
+	case GSM::EncryptingAndDecrypting: cipher = "both"; break;
+	case GSM::Encrypting: cipher = "encr"; break;
+	case GSM::Decrypting: cipher = "decr"; break;
 	default: cipher = "none";
 	}
 	snprintf(buffer, 254, "%5.2f %4d %5d %4d %s",
