@@ -1121,7 +1121,7 @@ class SACCHL1Encoder : public XCCHL1Encoder {
 
 
 
-//typedef XCCHL1Encoder SDCCHL1Encoder;
+typedef XCCHL1Encoder SDCCHL1Encoder;
 
 
 /** The Common Control Channel (CCCH).  Carries the AGCH, NCH, PCH. */
