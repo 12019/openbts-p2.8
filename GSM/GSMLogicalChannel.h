@@ -225,6 +225,8 @@ public:
 	    return NoCipher;
 	}
 
+	unsigned getCipherID() const { if (mL1) return mL1->getCipherID(); return 0; }
+
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default
 	    if (mL1) mL1->activateEncryption(i);
 	}

@@ -192,6 +192,12 @@ GSM::TCHFACCHLogicalChannel *allocateTCH(GSM::LogicalChannel *DCCH)
 		DCCH->send(GSM::L3CMServiceReject(0x16));
 		DCCH->send(GSM::L3ChannelRelease());
 	}
+	switch(DCCH->getCiphering()) {
+	case GSM::EncryptingAndDecrypting: TCH->activateEncryption(); TCH->activateDecryption(); break;
+	case GSM::Encrypting: TCH->activateEncryption(); break;
+	case GSM::Decrypting: TCH->activateDecryption(); break;
+	default: break;
+	}	
 	return TCH;
 }
 

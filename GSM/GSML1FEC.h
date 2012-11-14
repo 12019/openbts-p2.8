@@ -117,7 +117,7 @@ class L1Encoder {
 	/**@ Cipher state */
 	//@{
 	uint8_t mKc[8];					///< current Kc
-	unsigned mCipherID;				///< current 
+	unsigned mCipherID;				///< current cipher id
 	//@}
 	ViterbiR2O4 mVCoder;	///< nearly all GSM channels use the same convolutional code
 
@@ -191,6 +191,7 @@ class L1Encoder {
 	/** enable ciphering if Kc is set */
 	void enableEnciphering(unsigned i) { mCipherID = i; }
 
+	unsigned getCipherID() const { return mCipherID; }
 	//@}
 
 	protected:
@@ -353,6 +354,7 @@ class L1Decoder {
 	/** enable ciphering if Kc is set */
 	void enableDeciphering(unsigned i) { mCipherID = i; }
 
+	unsigned getCipherID() const { return mCipherID; }
 	//@}
 
 	protected:
@@ -462,6 +464,11 @@ class L1FEC {
 	    assert(mDecoder); mDecoder->setKc(Kc);
 	}
 
+	unsigned getCipherID() const {
+	    if (encrypting) { assert(mEncoder); return mEncoder->getCipherID(); }
+	    if (decrypting) { assert(mDecoder); return mDecoder->getCipherID(); }
+	    return 0;
+	}
 	const bool checkEncryption() { return encrypting; }
 	const bool checkDecryption() { return decrypting; }
 	void activateEncryption(unsigned i) { assert(mEncoder); encrypting = true; mEncoder->enableEnciphering(i); }
