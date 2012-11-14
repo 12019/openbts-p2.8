@@ -170,7 +170,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	    reg_code = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str());
 	    LOG(DEBUG) << reg_code << " received: " << RAND << " <=> " << SRESstr << " <=> " << Kc << " #" << cksn << endl;
-	    if (reg_code != 200) {
+	    if (reg_code > 300) {
 		LCH->send(L3AuthenticationReject());
 		LCH->send(L3ChannelRelease());
 		return 2;
@@ -186,18 +186,19 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		LCH->send(L3ChannelRelease());
 		return 1;
 	}
-	if(200 == reg_code) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
+	if(reg_code < 300) {// Ciphering Mode Procedures, GSM 04.08 3.4.7.
 	    if(gTMSITable.setKc(IMSI, Kc.c_str(), cksn)) {
-		LOG(INFO) << "Ciphering key set for LCH: " << LCH->setKc(Kc.c_str());
-		LCH->send(GSM::L3CipheringModeCommand(1)); // FIXME: use actual a5/#
-		LCH->activateDecryption();
+		unsigned a5_version = reg_code - 200;
+		LOG(INFO) << "Ciphering key set for a5/" << a5_version << " set on LCH: " << LCH->setKc(Kc.c_str());
+		LCH->send(GSM::L3CipheringModeCommand(a5_version)); // use actual a5/#
+		LCH->activateDecryption(a5_version);
 		LOG(INFO) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type(); // should be main DCCH
 		L3Message* mc_msg = getMessage(LCH);
 		L3CipheringModeComplete *mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
 		if(!mode_compl) { LOG(ERR) << "Ciphering Failure: " << mc_msg; return 5; }
 		else {
 		    LOG(INFO) << *mode_compl << " Responce received, activating encryption.";
-		    LCH->activateEncryption();
+		    LCH->activateEncryption(a5_version);
 		}
 		if (mc_msg) delete mc_msg;
 		return 0;

@@ -260,7 +260,7 @@ int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned le
 }
 
 int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
-{// return CKSN or error code, 200==OK
+{// return CKSN or error code (>300), 200 + cipher_id == OK
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
 	// Before start, need to add mCallID
@@ -313,12 +313,12 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
-		if (status > 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 202; }
+		if (status > 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 302; }
 
 		int ext = osip_extract(msg, 200, Kc, 16);// extrat Kc from response
 		if (ext < 8) {
 		    LOG(INFO) << "REGISTER success: found " << ext << " in response: " << *Kc;
-		    return 200;//success
+		    return 200 + ext;//success
 		}
 		int cksn = osip_extract(msg, 401, RAND, 32);
 		if (cksn < 8) {// if rand is included on 401 unauthorized, then the challenge-response game is afoot
