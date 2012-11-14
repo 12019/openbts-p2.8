@@ -70,6 +70,7 @@ bool LogicalChannel::setKc(const char * key)
     uint8_t Kc[8];
     if(osmo_hexparse(key, Kc, 8) != 8) return false;
     mL1->setKc(Kc);
+    if (mSACCH) mSACCH->setKc(key);
     return true;
 }
 
