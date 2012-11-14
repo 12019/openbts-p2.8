@@ -125,13 +125,14 @@ void L3MMMessage::text(ostream& os) const
 
 void L3LocationUpdatingRequest::parseBody( const  L3Frame &src, size_t &rp )
 {
-		// skip updating type
-		rp += 4;
 		// ciphering key sequence number
 		mCKSN.parseV(src, rp);
+		// skip updating type
+		rp += 4;
 		mLAI.parseV(src,rp);
 		mClassmark.parseV(src,rp);
 		mMobileIdentity.parseLV(src, rp);
+		LOG(ERR) << *this;
 }
 
 
@@ -227,11 +228,12 @@ void L3CMServiceReject::text(ostream& os) const
 
 void L3CMServiceRequest::parseBody( const L3Frame &src, size_t &rp )
 {
-    mCKSN.parseV(src, rp);	// ciphering key seq number
+	mCKSN.parseV(src, rp);	// ciphering key seq number
 	mServiceType.parseV(src,rp);
 	mClassmark.parseLV(src,rp);
 	mMobileIdentity.parseLV(src, rp);
 	// ignore priority
+	LOG(ERR) << *this;
 }
 
 void L3CMServiceRequest::text(ostream& os) const
@@ -253,6 +255,7 @@ void L3CMReestablishmentRequest::parseBody(const L3Frame& src, size_t &rp)
 	mClassmark.parseLV(src,rp);
 	mMobileID.parseLV(src,rp);
 	mHaveLAI = mLAI.parseTLV(0x13,src,rp);
+	LOG(ERR) << *this;
 }
 
 void L3CMReestablishmentRequest::text(ostream& os) const
@@ -333,7 +336,9 @@ void L3AuthenticationRequest::writeBody(L3Frame& dest, size_t &wp) const
 {
 	dest.writeField(wp,0,4);		// spare half octet
 	mCipheringKeySequenceNumber.writeV(dest,wp);
+
 	mRAND.writeV(dest,wp);
+	LOG(ERR) << *this;
 }
 
 void L3AuthenticationRequest::text(ostream& os) const

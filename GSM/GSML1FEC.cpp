@@ -233,6 +233,7 @@ void L1Encoder::open()
 	if (!mRunning) start();
 	mTotalBursts=0;
 	mActive = true;
+	mCipherID = 0;
 	resync();
 }
 
@@ -348,6 +349,7 @@ void L1Decoder::open()
 	mT3109.reset();
 	mT3101.set();
 	mActive = true;
+	mCipherID = 0;
 }
 
 
