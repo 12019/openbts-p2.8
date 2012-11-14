@@ -229,12 +229,12 @@ public:
 
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default
 	    if (mL1) mL1->activateEncryption(i);
-	    if (mSACCH) mL1->activateEncryption(i);
+	    if (mSACCH) ((LogicalChannel*)mSACCH)->activateEncryption(i);
 	}
 
 	void activateDecryption(unsigned i = 1) { // use A5/1 by default
 	    if (mL1) mL1->activateDecryption(i);
-	    if (mSACCH) mL1->activateEncryption(i);
+	    if (mSACCH) ((LogicalChannel*)mSACCH)->activateDecryption(i);
 	}
 
 	/** The TDMA parameters for the transmit side. */
