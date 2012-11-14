@@ -646,14 +646,14 @@ void printChanInfo(unsigned transID, const GSM::LogicalChannel* chan, ostream& o
 	char buffer[256];
 	string cipher;
 	switch(chan->getCiphering()) {
-	case GSM::EncryptingAndDecrypting: cipher = "both"; break;
-	case GSM::Encrypting: cipher = "encr"; break;
-	case GSM::Decrypting: cipher = "decr"; break;
-	default: cipher = "none";
+	case GSM::EncryptingAndDecrypting: cipher = "ed"; break;
+	case GSM::Encrypting: cipher = "e "; break;
+	case GSM::Decrypting: cipher = "d "; break;
+	default: cipher = "  ";
 	}
-	snprintf(buffer, 254, "%5.2f %4d %5d %4d %s",
+	snprintf(buffer, 254, "%5.2f %4d %5d %4d A5/%1d/%s",
 		100.0*chan->FER(), (int)round(chan->RSSI()),
-		 chan->actualMSPower(), chan->actualMSTiming(), cipher.c_str());
+		 chan->actualMSPower(), chan->actualMSTiming(), chan->getCipherID(), cipher.c_str());
 	os << " " << buffer;
 	const GSM::L3MeasurementResults& meas = chan->SACCH()->measurementResults();
 	if (!meas.MEAS_VALID()) {
