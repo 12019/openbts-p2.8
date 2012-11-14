@@ -781,8 +781,12 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	}
 
 	// Let the phone know we're going ahead with the transaction.
-	LOG(INFO) << "sending CMServiceAccept";
-	LCH->send(GSM::L3CMServiceAccept());
+	if (LCH->getCiphering() != GSM::Decrypting) {
+	    LOG(INFO) << "sending CMServiceAccept";
+	    LCH->send(GSM::L3CMServiceAccept());
+	} else {
+	    LOG(INFO) << "Decryption active: CMServiceAccept NOT sent because CipherModeCommand implies it.";
+	}
 
 	// Get the Setup message.
 	// GSM 04.08 5.2.1.2
