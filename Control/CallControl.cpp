@@ -880,6 +880,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	if (veryEarly) {
 		// For very early assignment, we need a mode change.
 		static const GSM::L3ChannelMode mode(GSM::L3ChannelMode::SpeechV1);
+		LOG(DEBUG) << "sending ChannelModeModify, transaction state:" << transaction->GSMState();
 		LCH->send(GSM::L3ChannelModeModify(LCH->channelDescription(), mode));
 		GSM::L3Message *msg_ack = getMessage(LCH);
 		// FIXME: loop until ACK or unrecoverable error?
