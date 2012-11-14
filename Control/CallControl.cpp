@@ -781,7 +781,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	}
 
 	// Let the phone know we're going ahead with the transaction.
-	if (LCH->getCiphering() != GSM::Decrypting) {
+	if (auth_result) {
 	    LOG(INFO) << "sending CMServiceAccept";
 	    LCH->send(GSM::L3CMServiceAccept());
 	} else {
