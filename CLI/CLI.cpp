@@ -580,6 +580,17 @@ int alarms(int argc, char** argv, ostream& os)
 	return SUCCESS;
 }
 
+int disable_cipher(int argc, char** argv, ostream& os)
+{
+    gConfig.set("GSM.Cipher", 0);
+    return SUCCESS;
+}
+
+int enable_cipher(int argc, char** argv, ostream& os)
+{
+    gConfig.set("GSM.Cipher", 1);
+    return SUCCESS;
+}
 
 /** Version string. */
 int version(int argc, char **argv, ostream& os)
@@ -818,6 +829,8 @@ void Parser::addCommands()
 	addCommand("configsave", configsave, "<path> -- write the current configuration to a file");
 	addCommand("regperiod", regperiod, "[GSM] [SIP] -- get/set the registration period (GSM T3212), in MINUTES");
 	addCommand("alarms", alarms, "-- show latest alarms");
+	addCommand("disable_cipher", disable_cipher, "-- disable encryption globally (recommended for testing only, use per-imsi settings instead)");
+	addCommand("enable_cipher", enable_cipher, "-- enable encryption globally (if it was disabled for testing)");
 	addCommand("version", version,"-- print the version string");
 	addCommand("page", page, "[IMSI time] -- dump the paging table or page the given IMSI for the given period");
 	addCommand("chans", chans, "-- report PHY status for active channels");

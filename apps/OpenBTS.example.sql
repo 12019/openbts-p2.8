@@ -25,6 +25,7 @@ INSERT INTO "CONFIG" VALUES('Control.SMS.QueryRRLP',NULL,0,1,'If not NULL, query
 INSERT INTO "CONFIG" VALUES('Control.TMSITable.MaxAge','72',0,0,'Maximum allowed age for a TMSI in hours.');
 INSERT INTO "CONFIG" VALUES('Control.TMSITable.MaxSize','100000',0,0,'Maximum size of TMSI table before oldest TMSIs are discarded.');
 INSERT INTO "CONFIG" VALUES('Control.VEA',1,0,1,'If not NULL, user very early assignment for speech call establishment.  See GSM 04.08 Section 7.3.2 for a detailed explanation of assignment types. If VEA is selected, GSM.CellSelection.NECI should be set to 1.  See GSM 04.08 Sections 9.1.8 and 10.5.2.4 for an explanation of the NECI bit.');
+INSERT INTO "CONFIG" VALUES('GSM.Cipher','1',0,0,'Enable ciphering globally.');
 INSERT INTO "CONFIG" VALUES('GSM.CCCH.AGCH.QMax','5',0,0,'Maximum number of access grants to be queued for transmission on AGCH before declaring congrestion.');
 INSERT INTO "CONFIG" VALUES('GSM.CCCH.CCCH-CONF','1',0,0,'CCCH configuration type.  See GSM 10.5.2.11 for encoding.  Value of 1 means we are using a C-V beacon.  Any other value selects a C-IV beacon.');
 INSERT INTO "CONFIG" VALUES('GSM.CCCH.PCH.Reserve','0',0,0,'Number of CCCH subchannels to reserve for paging.');

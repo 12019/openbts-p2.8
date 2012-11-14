@@ -460,8 +460,10 @@ class L1FEC {
 		{ assert(mEncoder); return mEncoder->descriptiveString(); }
 
 	void setKc(uint8_t *Kc) {
-	    assert(mEncoder); mEncoder->setKc(Kc);
-	    assert(mDecoder); mDecoder->setKc(Kc);
+	    if (gConfig.getNum("GSM.Cipher")) {
+		assert(mEncoder); mEncoder->setKc(Kc);
+		assert(mDecoder); mDecoder->setKc(Kc);
+	    }
 	}
 
 	unsigned getCipherID() const {
@@ -471,8 +473,8 @@ class L1FEC {
 	}
 	const bool checkEncryption() { return encrypting; }
 	const bool checkDecryption() { return decrypting; }
-	void activateEncryption(unsigned i) { assert(mEncoder); encrypting = true; mEncoder->enableEnciphering(i); }
-	void activateDecryption(unsigned i) { assert(mDecoder); decrypting = true; mDecoder->enableDeciphering(i); }
+	void activateEncryption(unsigned i) { assert(mEncoder); if (gConfig.getNum("GSM.Cipher")) { encrypting = true; mEncoder->enableEnciphering(i); } }
+	void activateDecryption(unsigned i) { assert(mDecoder); if (gConfig.getNum("GSM.Cipher")) { decrypting = true; mDecoder->enableDeciphering(i); } }
 	//@}
 
 

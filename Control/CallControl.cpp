@@ -193,9 +193,9 @@ GSM::TCHFACCHLogicalChannel *allocateTCH(GSM::LogicalChannel *DCCH)
 		DCCH->send(GSM::L3ChannelRelease());
 	}
 	switch(DCCH->getCiphering()) {
-	case GSM::EncryptingAndDecrypting: TCH->activateEncryption(); TCH->activateDecryption(); break;
-	case GSM::Encrypting: TCH->activateEncryption(); break;
-	case GSM::Decrypting: TCH->activateDecryption(); break;
+	case GSM::EncryptingAndDecrypting: TCH->activateEncryption(DCCH->getCipherID()); TCH->activateDecryption(DCCH->getCipherID()); break;
+	case GSM::Encrypting: TCH->activateEncryption(DCCH->getCipherID()); break;
+	case GSM::Decrypting: TCH->activateDecryption(DCCH->getCipherID()); break;
 	default: break;
 	}	
 	return TCH;
@@ -781,11 +781,11 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	}
 
 	// Let the phone know we're going ahead with the transaction.
-	if (auth_result) {
+	if (gConfig.getNum("GSM.Cipher") && !auth_result) {
+	    LOG(INFO) << "Decryption active: CMServiceAccept NOT sent because CipherModeCommand implies it.";
+	} else {
 	    LOG(INFO) << "sending CMServiceAccept";
 	    LCH->send(GSM::L3CMServiceAccept());
-	} else {
-	    LOG(INFO) << "Decryption active: CMServiceAccept NOT sent because CipherModeCommand implies it.";
 	}
 
 	// Get the Setup message.
