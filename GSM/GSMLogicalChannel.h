@@ -228,12 +228,18 @@ public:
 	unsigned getCipherID() const { if (mL1) return mL1->getCipherID(); return 0; }
 
 	void activateEncryption(unsigned i = 1) { // use A5/1 by default
-	    if (mL1) mL1->activateEncryption(i);
+	    if (mL1) {
+		if (mL1->checkEncryption()) LOG(ERR) << "Encryption is already activated on " << mL1->descriptiveString();
+		mL1->activateEncryption(i);
+	    }
 	    if (mSACCH) ((LogicalChannel*)mSACCH)->activateEncryption(i);
 	}
 
 	void activateDecryption(unsigned i = 1) { // use A5/1 by default
-	    if (mL1) mL1->activateDecryption(i);
+	    if (mL1) {
+		if (mL1->checkDecryption()) LOG(ERR) << "Decryption is already activated on " << mL1->descriptiveString();
+		mL1->activateDecryption(i);
+	    }
 	    if (mSACCH) ((LogicalChannel*)mSACCH)->activateDecryption(i);
 	}
 
