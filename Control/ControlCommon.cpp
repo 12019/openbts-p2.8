@@ -119,15 +119,16 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 // This will be set true if registration succeeded in the SIP world.
     string RAND, Kc;
     int cksn;
-    LOG(INFO) << "Authenticating " << name << "..." << endl;
+	LOG(DEBUG) << " Authenticating " << name << endl;
     try {
 	SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(), IMSI);
-	LOG(DEBUG) << "waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
+		LOG(DEBUG) << "Waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	cksn = engine.Register(SIPEngine::SIPRegister, &RAND);
-	LOG(DEBUG) << "registration code " << cksn << " received: " << RAND << endl;
+		LOG(DEBUG) << "Registration code " << cksn << " received: " << RAND << endl;
     }
-    catch(SIPTimeout) {	// Reject with a "network failure" cause code, 0x11.
-	    LOG(ALERT) "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+	catch(SIPTimeout) {
+		// Reject with a "network failure" cause code, 0x11.
+		LOG(DEBUG) << "SIP registration timed out.  Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
 	    LCH->send(L3LocationUpdatingReject(0x11));
 	    // HACK -- wait long enough for a response
 	    // FIXME -- Why are we doing this?
@@ -139,7 +140,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 
     // Did we get a RAND for challenge-response?
     if (RAND.length() != 0) {
-	LOG(INFO) << "sending " << RAND << " to IMSI "<< IMSI << " over " << LCH->type();
+		LOG(DEBUG) << "Sending " << RAND << " to IMSI "<< IMSI << " over " << LCH->type();
 	uint64_t uRAND;
 	uint64_t lRAND;
 	gSubscriberRegistry.stringToUint(RAND, &uRAND, &lRAND);
@@ -149,13 +150,13 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	L3AuthenticationResponse *resp = dynamic_cast<L3AuthenticationResponse*>(msg);
 	if (!resp) {
 		if (msg) {
-			LOG(WARNING) << "Unexpected message " << *msg;
+				LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
 			delete msg;
 		}
 		// FIXME -- We should differentiate between wrong message and no message at all.
 		throw UnexpectedMessage();
 	}
-	LOG(INFO) << *resp;
+		LOG(DEBUG) << "OK, Recieved L3AuthenticationResponse"<<*resp;
 	uint32_t mobileSRES = resp->SRES().value();
 	delete msg;
 	// verify SRES
@@ -167,7 +168,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	int reg_code;
 	try {
 	    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(), IMSI);
-	    LOG(DEBUG) << "waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
+			LOG(DEBUG) << "Waiting for authentication of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 	    reg_code = engine.Register(SIPEngine::SIPRegister, &RAND, &Kc, IMSI, SRESstr.c_str());
 	    LOG(DEBUG) << reg_code << " received: " << RAND << " <=> " << SRESstr << " <=> " << Kc << " #" << cksn << endl;
 	    if (reg_code > 300) {
@@ -176,8 +177,10 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 		return 2;
 	    }
 	}
-	catch(SIPTimeout) {// Reject with a "network failure" cause code, 0x11.
-		LOG(ALERT) "SIP authentication timed out. Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+		catch(SIPTimeout) {
+			// Reject with a "network failure" cause code, 0x11.
+			LOG(DEBUG) << "SIP authentication timed out. Is the proxy running at " << gConfig.getStr("SIP.Proxy.Registration");
+			LOG(DEBUG) << "Send L3LocationUpdatingReject and L3ChannelRelease";
 		LCH->send(L3LocationUpdatingReject(0x11));
 		// HACK -- wait long enough for a response
 		// FIXME -- Why are we doing this?
@@ -190,6 +193,7 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    if (gConfig.getNum("GSM.Cipher")) {
 		if(gTMSITable.setKc(IMSI, Kc.c_str(), cksn)) {
 		    unsigned a5_version = reg_code - 200;
+			LCH->setKc(Kc.c_str());
 		    LOG(INFO) << "Ciphering key set for a5/" << a5_version << " set on LCH: " << LCH->setKc(Kc.c_str());
 		    LCH->send(GSM::L3CipheringModeCommand(a5_version)); // use actual a5/#
 		    LCH->activateDecryption(a5_version);
@@ -202,11 +206,13 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 			LCH->activateEncryption(a5_version);
 		    }
 		    if (mc_msg) delete mc_msg;
+				LOG(DEBUG) << "Authentication success for" << mobID;
 		    return 0;
 		}
 		LOG(ERR) << "Failed to set Kc=" << Kc << " for IMSI=" << IMSI << " in TMSI table.";
 		return 4;
-	    } else return 0; // auth successful but ciphering is globally disabled
+	    }
+	else return 0; // auth successful but ciphering is globally disabled
 	}
     } else LOG(INFO) << "Failed to obtain RAND" << endl;
     return 3;

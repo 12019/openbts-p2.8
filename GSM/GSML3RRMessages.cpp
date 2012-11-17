@@ -256,7 +256,6 @@ void L3PagingResponse::parseBody(const L3Frame& src, size_t &rp)
 	mClassmark.parseLV(src,rp);
 	// We only care about the mobile ID.
 	mMobileID.parseLV(src,rp);
-	LOG(ERR) << "L3PagingResponse::parseBody(): " << *this;
 }
 
 void L3PagingResponse::text(ostream& os) const

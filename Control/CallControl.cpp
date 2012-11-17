@@ -193,10 +193,22 @@ GSM::TCHFACCHLogicalChannel *allocateTCH(GSM::LogicalChannel *DCCH)
 		DCCH->send(GSM::L3ChannelRelease());
 	}
 	switch(DCCH->getCiphering()) {
-	case GSM::EncryptingAndDecrypting: TCH->activateEncryption(DCCH->getCipherID()); TCH->activateDecryption(DCCH->getCipherID()); break;
-	case GSM::Encrypting: TCH->activateEncryption(DCCH->getCipherID()); break;
-	case GSM::Decrypting: TCH->activateDecryption(DCCH->getCipherID()); break;
-	default: break;
+	case GSM::EncryptingAndDecrypting:
+		LOG(DEBUG) << "Activate TCH Encryption & Decryption";
+		TCH->activateEncryption(DCCH->getEncCipherID());
+		TCH->activateDecryption(DCCH->getDecCipherID());
+		break;
+	case GSM::Encrypting:
+		LOG(DEBUG) << "Activate TCH Encryption";
+		TCH->activateEncryption(DCCH->getEncCipherID());
+		break;
+	case GSM::Decrypting:
+		LOG(DEBUG) << "Activate TCH Decryption";
+		TCH->activateDecryption(DCCH->getDecCipherID());
+		break;
+	default: 
+		LOG(DEBUG) << "Encryption and Decryption not Activate on TCH";
+		break;
 	}	
 	return TCH;
 }
@@ -364,8 +376,8 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 				transaction->MODWaitFor487();
 			}
 			else { //if we received it, send a 4** instead
-+                               //transaction->MODSendERROR(NULL, 480, "Temporarily Unavailable", true);
-+                               transaction->MODSendERROR(NULL, 486, "Busy Here", true);
+				//transaction->MODSendERROR(NULL, 480, "Temporarily Unavailable", true);
+				transaction->MODSendERROR(NULL, 486, "Busy Here", true);
 				transaction->MODWaitForERRORACK(true);
 			}
 			//transaction->GSMState(GSM::NullState);
@@ -461,7 +473,7 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 		LCH->send(GSM::L3CMServiceReject(0x20));
 		return false;
 	}
-
+/*
 	// MM Status - GSM 04.08, part 4.6
 	// If we get this message, is is probably carrying an error code.
 	if (const GSM::L3MMStatus* mm_status = dynamic_cast<const GSM::L3MMStatus*>(message)) {
@@ -474,8 +486,9 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 	    LOG(INFO) << "GSM ChannelModify Acknowledge from " << transaction->subscriber() << ": " << mod_ack;
 	    MOCController(transaction, dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
 	    return false;
-	}
 
+	}
+*/
 //#if 0
 
 //This needs to work, but putting it in causes heap corruption.
@@ -768,9 +781,9 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// For now, we are assuming that the phone won't make a call if it didn't
 	// get registered.
 
-	LOG(INFO) << "Trying to athenticate caller..." << endl;
+	LOG(DEBUG) << "Trying to athenticate caller: " << mobileID << endl;
 	unsigned auth_result = attemptAuth(mobileID, LCH);
-	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
+	LOG(DEBUG) << "Authentication routine returned: " << auth_result << endl;
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	if (!veryEarly) {
@@ -781,11 +794,12 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	}
 
 	// Let the phone know we're going ahead with the transaction.
-	if (gConfig.getNum("GSM.Cipher") && !auth_result) {
-	    LOG(INFO) << "Decryption active: CMServiceAccept NOT sent because CipherModeCommand implies it.";
-	} else {
-	    LOG(INFO) << "sending CMServiceAccept";
+	if ((LCH->getCiphering() != GSM::Decrypting) && (LCH->getCiphering() != GSM::EncryptingAndDecrypting)) {
+		LOG(DEBUG) << "Decryption NOT active for: " << mobileID << " Sending CMServiceAccept";
 	    LCH->send(GSM::L3CMServiceAccept());
+	}
+	else {
+		LOG(DEBUG) << "Decryption ACTIVE for:" << mobileID << " CMServiceAccept NOT sent, because CipherModeCommand implies it.";
 	}
 
 	// Get the Setup message.
@@ -794,7 +808,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 
 	// Check for abort, if so close and cancel
 	if (const GSM::L3CMServiceAbort *cmsab = dynamic_cast<const GSM::L3CMServiceAbort*>(msg_setup)) {
-		LOG(INFO) << "received CMServiceAbort, closing channel and clearing";
+		LOG(DEBUG) << "Received CMServiceAbort, closing channel and clearing :" << mobileID ;
 		//SIP Engine not started, just close the channel and exit
 		LCH->send(GSM::L3ChannelRelease());
 		delete cmsab;
@@ -804,7 +818,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	const GSM::L3Setup *setup = dynamic_cast<const GSM::L3Setup*>(msg_setup);
 	if (!setup) {
 		if (msg_setup) {
-			LOG(WARNING) << "Unexpected message " << *msg_setup;
+			LOG(DEBUG) << "Waiting for L3Setup, got Unexpected message " << *msg_setup;
 			delete msg_setup;
 		}
 		throw UnexpectedMessage();
@@ -820,14 +834,14 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 		}
 	}
 
-	LOG(INFO) << *setup;
+	LOG(DEBUG) << *setup;
 	// Pull out the L3 short transaction information now.
 	// See GSM 04.07 11.2.3.1.3.
 	// Set the high bit, since this TI came from the MS.
 	unsigned L3TI = setup->TI() | 0x08;
 	if (!setup->haveCalledPartyBCDNumber()) {
 		// FIXME -- This is quick-and-dirty, not following GSM 04.08 5.
-		LOG(WARNING) << "MOC setup with no number";
+		LOG(DEBUG) << "MOC setup with no number";
 		// Cause 0x60 "Invalid mandatory information"
 		LCH->send(GSM::L3ReleaseComplete(L3TI,0x60));
 		LCH->send(GSM::L3ChannelRelease());
@@ -837,7 +851,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 		return;
 	}
 
-	LOG(DEBUG) << "SIP start engine";
+	LOG(DEBUG) << "SIP start engine"<< mobileID;
 	// Get the users sip_uri by pulling out the IMSI.
 	//const char *IMSI = mobileID.digits();
 	// Pull out Number user is trying to call and use as the sip_uri.
@@ -868,7 +882,7 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	LOG(DEBUG) << "transaction: " << *transaction;
 
 	// Once we can start SIP call setup, send Call Proceeding.
-	LOG(INFO) << "Sending Call Proceeding";
+	LOG(DEBUG) << "Sending Call Proceeding";
 	LCH->send(GSM::L3CallProceeding(L3TI));
 	transaction->GSMState(GSM::MOCProceeding);
 	// Finally done with the Setup message.
@@ -878,16 +892,27 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// If we need a TCH assignment, we do it here.
 	LOG(DEBUG) << "transaction: " << *transaction;
 	if (veryEarly) {
+		LOG(DEBUG) << "Use VEA for:" << mobileID;
 		// For very early assignment, we need a mode change.
 		static const GSM::L3ChannelMode mode(GSM::L3ChannelMode::SpeechV1);
-		LOG(DEBUG) << "sending ChannelModeModify, transaction state:" << transaction->GSMState();
 		LCH->send(GSM::L3ChannelModeModify(LCH->channelDescription(), mode));
 		GSM::L3Message *msg_ack = getMessage(LCH);
-		// FIXME: loop until ACK or unrecoverable error?
-		bool call_cleared = callManagementDispatchGSM(transaction, LCH, msg_ack);
-
-		if (msg_ack) delete msg_ack;
-		if (call_cleared) return abortAndRemoveCall(transaction, LCH, GSM::L3Cause(0x06));
+		const GSM::L3ChannelModeModifyAcknowledge *ack =
+			dynamic_cast<GSM::L3ChannelModeModifyAcknowledge*>(msg_ack);
+		if (!ack) {
+			// FIXME -- We need this in a loop calling the GSM disptach function.
+			if (msg_ack) {
+				LOG(ERR) << "MOCStarter: Waiting for L3ChannelModeModifyAcknowledge, got Unexpected message " << *msg_ack;
+				delete msg_ack;
+			}
+			throw UnexpectedMessage(transaction->ID());
+		}
+		// Cause 0x06 is "channel unacceptable"
+		bool modeOK = (ack->mode()==mode);
+		delete msg_ack;
+		if (!modeOK) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
+		LOG(ERR) << "MOCStarter: Recieved L3ChannelModeModifyAcknowledge OK, moving to MOCController...";
+		MOCController(transaction,dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
 
 	} else {
 		// For late assignment, send the TCH assignment now.
@@ -1026,7 +1051,7 @@ void Control::MOCController(TransactionEntry *transaction, GSM::TCHFACCHLogicalC
 void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH, GSM::L3MobileIdentity mobID)
 {
 	assert(LCH);
-	LOG(INFO) << "MTC on " << LCH->type() << " transaction: "<< *transaction;
+	LOG(DEBUG) << "MTC on " << LCH->type() << " transaction: "<< *transaction;
 
 	// Determine if very early assigment already happened.
 	bool veryEarly = false;
@@ -1036,7 +1061,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	if (gConfig.defines("Control.Call.QueryRRLP.Early")) {
 		// Query for RRLP
 		if (!sendRRLP(transaction->subscriber(), LCH)) {
-			LOG(INFO) << "RRLP request failed";
+			LOG(DEBUG) << "RRLP request failed";
 		}
 	}
 
@@ -1056,11 +1081,11 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	unsigned L3TI = transaction->L3TI();
 	assert(L3TI<7);
 
-	LOG(INFO) << "Trying to athenticate callee..." << endl;
+	LOG(DEBUG) << "Trying to athenticate callee..." << endl;
 	unsigned auth_result = attemptAuth(mobID, LCH);
-	LOG(INFO) << "Authentication routine returned " << auth_result << endl;
+	LOG(DEBUG) << "Authentication routine returned " << auth_result << endl;
 	// GSM 04.08 5.2.2.1
-	LOG(INFO) << "sending GSM Setup to call " << transaction->calling();
+	LOG(DEBUG) << "sending GSM Setup to call " << transaction->calling();
 	LCH->send(GSM::L3Setup(L3TI,GSM::L3CallingPartyBCDNumber(transaction->calling())));
 	transaction->setTimer("303");
 	transaction->GSMState(GSM::CallPresent);
@@ -1077,13 +1102,13 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 		// FIXME -- What's the proper timeout here?
 		// It's the SIP TRYING timeout, whatever that is.
 		if (updateGSMSignalling(transaction,LCH,1000)) {
-			LOG(INFO) << "Release from GSM side";
+			LOG(DEBUG) << "Release from GSM side";
 			LCH->send(GSM::RELEASE);
 			return;
 		}
 		// Check for SIP cancel, too.
 		if (transaction->MTCCheckForCancel()==SIP::MTDCanceling) {
-			LOG(INFO) << "call cancelled on SIP side";
+			LOG(DEBUG) << "call cancelled on SIP side";
 			transaction->MTDSendCANCELOK();
 			//should probably send a 487 here
 			// Cause 0x15 is "rejected"
@@ -1104,19 +1129,25 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 		static const GSM::L3ChannelMode mode(GSM::L3ChannelMode::SpeechV1);
 		LCH->send(GSM::L3ChannelModeModify(LCH->channelDescription(),mode));
 		GSM::L3Message* msg_ack = getMessage(LCH);
-		const GSM::L3ChannelModeModifyAcknowledge *ack =
-			dynamic_cast<GSM::L3ChannelModeModifyAcknowledge*>(msg_ack);
-		if (!ack) {
-			if (msg_ack) {
-				LOG(WARNING) << "Unexpected message " << *msg_ack;
-				delete msg_ack;
-			}
+		const GSM::L3ChannelModeModifyAcknowledge *ack = NULL;
+		// Process call progress messages as usual. E.g. phones could send Alerting
+		// massages even before we send Channel Mode Modify, because they don't
+		// know we're going to send it.
+		//   Observed on: Sagem OT-290 when ciphering  is enabled.
+		while ((ack = dynamic_cast<GSM::L3ChannelModeModifyAcknowledge*>(msg_ack)) == NULL) {
+			if (!msg_ack) {
 			throw UnexpectedMessage(transaction->ID());
+			}
+			bool call_cleared = callManagementDispatchGSM(transaction, LCH, msg_ack);
+			delete msg_ack;
+			if (call_cleared) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
+			msg_ack = getMessage(LCH);
 		}
 		// Cause 0x06 is "channel unacceptable"
 		bool modeOK = (ack->mode()==mode);
 		delete msg_ack;
 		if (!modeOK) return abortAndRemoveCall(transaction,LCH,GSM::L3Cause(0x06));
+		LOG(ERR) << "OK, moving to MTCController()";
 		MTCController(transaction,dynamic_cast<GSM::TCHFACCHLogicalChannel*>(LCH));
 	}
 	else {

@@ -466,11 +466,23 @@ class L1FEC {
 	    }
 	}
 
+	unsigned getEncCipherID() const {
+	    assert(mEncoder);
+	    return mEncoder->getCipherID();
+	}
+
+	unsigned getDecCipherID() const {
+	    assert(mDecoder);
+	    return mDecoder->getCipherID();
+	}
+/*
 	unsigned getCipherID() const {
 	    if (encrypting) { assert(mEncoder); return mEncoder->getCipherID(); }
 	    if (decrypting) { assert(mDecoder); return mDecoder->getCipherID(); }
 	    return 0;
 	}
+*/
+
 	const bool checkEncryption() { return encrypting; }
 	const bool checkDecryption() { return decrypting; }
 	void activateEncryption(unsigned i) { assert(mEncoder); if (gConfig.getNum("GSM.Cipher")) { encrypting = true; mEncoder->enableEnciphering(i); } }

@@ -132,7 +132,6 @@ void L3LocationUpdatingRequest::parseBody( const  L3Frame &src, size_t &rp )
 		mLAI.parseV(src,rp);
 		mClassmark.parseV(src,rp);
 		mMobileIdentity.parseLV(src, rp);
-		LOG(ERR) << *this;
 }
 
 
@@ -233,7 +232,6 @@ void L3CMServiceRequest::parseBody( const L3Frame &src, size_t &rp )
 	mClassmark.parseLV(src,rp);
 	mMobileIdentity.parseLV(src, rp);
 	// ignore priority
-	LOG(ERR) << *this;
 }
 
 void L3CMServiceRequest::text(ostream& os) const
@@ -255,7 +253,6 @@ void L3CMReestablishmentRequest::parseBody(const L3Frame& src, size_t &rp)
 	mClassmark.parseLV(src,rp);
 	mMobileID.parseLV(src,rp);
 	mHaveLAI = mLAI.parseTLV(0x13,src,rp);
-	LOG(ERR) << *this;
 }
 
 void L3CMReestablishmentRequest::text(ostream& os) const
@@ -338,7 +335,6 @@ void L3AuthenticationRequest::writeBody(L3Frame& dest, size_t &wp) const
 	mCipheringKeySequenceNumber.writeV(dest,wp);
 
 	mRAND.writeV(dest,wp);
-	LOG(ERR) << *this;
 }
 
 void L3AuthenticationRequest::text(ostream& os) const
