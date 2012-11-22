@@ -193,28 +193,30 @@ unsigned Control::attemptAuth(GSM::L3MobileIdentity mobID, GSM::LogicalChannel* 
 	    if (gConfig.getNum("GSM.Cipher")) {
 		if(gTMSITable.setKc(IMSI, Kc.c_str(), cksn)) {
 		    unsigned a5_version = reg_code - 200;
-			LCH->setKc(Kc.c_str());
-		    LOG(INFO) << "Ciphering key set for a5/" << a5_version << " set on LCH: " << LCH->setKc(Kc.c_str());
+		    LCH->setKc(Kc.c_str());
+		    LOG(INFO) << "Ciphering key set for a5/" << a5_version << " set on " << LCH->type();
 		    LCH->send(GSM::L3CipheringModeCommand(a5_version)); // use actual a5/#
 		    LCH->activateDecryption(a5_version);
-		    LOG(INFO) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type(); // should be main DCCH
+		    LOG(INFO) << "Decryption activated: " << LCH->getDecCipherID() << " Ciphering Mode Command sent over " << LCH->type(); // should be main DCCH
 		    L3Message* mc_msg = getMessage(LCH);
 		    L3CipheringModeComplete *mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
 		    if(!mode_compl) { LOG(ERR) << "Ciphering Failure: " << mc_msg; return 5; }
 		    else {
 			LOG(INFO) << *mode_compl << " Responce received, activating encryption.";
 			LCH->activateEncryption(a5_version);
+			LOG(INFO) << "Encryption activated: " << LCH->getEncCipherID();
 		    }
 		    if (mc_msg) delete mc_msg;
-				LOG(DEBUG) << "Authentication success for" << mobID;
+				LOG(DEBUG) << "Authentication success for " << mobID;
 		    return 0;
 		}
-		LOG(ERR) << "Failed to set Kc=" << Kc << " for IMSI=" << IMSI << " in TMSI table.";
+		else LOG(ERR) << "Failed to set Kc=" << Kc << " for IMSI=" << IMSI << " in TMSI table.";
 		return 4;
 	    }
-	else return 0; // auth successful but ciphering is globally disabled
+	    else return 0; // auth successful but ciphering is globally disabled
 	}
-    } else LOG(INFO) << "Failed to obtain RAND" << endl;
+    }
+    else LOG(INFO) << "Failed to obtain RAND" << endl;
     return 3;
 }
 

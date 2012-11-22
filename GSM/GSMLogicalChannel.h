@@ -218,56 +218,27 @@ public:
 	    if (mL1) {
 		bool e = mL1->checkEncryption();
 		bool d = mL1->checkDecryption();
-			if (e && d ) {
-				LOG(DEBUG) << "EncryptingAndDecrypting";
-				return EncryptingAndDecrypting;
+		if (e && d ) return EncryptingAndDecrypting;
+		if (e) return Encrypting;
+		if (d) return Decrypting;
 	    }
-			if (e) {
-				LOG(DEBUG) << "Encrypting";
-				return Encrypting;
-			}
-			if (d) {
-				LOG(DEBUG) << "Decrypting";
-				return Decrypting;
-			}
-		}
-		LOG(DEBUG) << "No Cipher";
 	    return NoCipher;
 	}
 
-	unsigned getCipherID() const { if (mL1) /*Fixme!!!*/ return mL1->getEncCipherID(); return 0; }
-	unsigned getEncCipherID() const { if (mL1) /*Fixme!!!*/ return mL1->getEncCipherID(); return 0; }
-	unsigned getDecCipherID() const { if (mL1) /*Fixme!!!*/ return mL1->getDecCipherID(); return 0; }
-
-	void activateEncryption(unsigned i = 1) { // use A5/1 by default
-	    if (gConfig.getNum("GSM.Cipher")) {
-		if (mL1) {
-			if (mL1->getEncCipherID()==0) {
-				LOG(DEBUG) << "Activate Encryption on"<< mL1->descriptiveString();
-				mL1->activateEncryption(i);
-			}
-			else {
-				LOG(DEBUG) << "FAIL : Encryption is already activated on " << mL1->descriptiveString();
-			}
-		}
-		if (mSACCH) ((LogicalChannel*)mSACCH)->activateEncryption(i);
+	unsigned getCipherID() const {
+	    switch(getCiphering()) {
+	    case GSM::EncryptingAndDecrypting: return getEncCipherID();
+	    case GSM::Encrypting: return getEncCipherID();
+	    case GSM::Decrypting: return getDecCipherID();
+	    default: return 0;
 	    }
 	}
 
-	void activateDecryption(unsigned i = 1) { // use A5/1 by default
-	    if (gConfig.getNum("GSM.Cipher")) {
-		if (mL1) {
-			if (mL1->getDecCipherID()==0) {
-				LOG(DEBUG) << "Activate Decryption on"<< mL1->descriptiveString();
-				mL1->activateDecryption(i);
-			}
-			else {
-				LOG(DEBUG) << "FAIL : Decryption is already activated on " << mL1->descriptiveString();
-			}
-		}
-		if (mSACCH) ((LogicalChannel*)mSACCH)->activateDecryption(i);
-	    }
-	}
+	unsigned getEncCipherID() const { if (mL1) return mL1->getEncCipherID(); return 0; }
+	unsigned getDecCipherID() const { if (mL1) return mL1->getDecCipherID(); return 0; }
+
+	void activateEncryption(unsigned i);
+	void activateDecryption(unsigned i);
 
 	/** The TDMA parameters for the transmit side. */
 	const TDMAMapping& txMapping() const { assert(mL1); return mL1->txMapping(); }

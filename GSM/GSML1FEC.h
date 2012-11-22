@@ -186,7 +186,7 @@ class L1Encoder {
 	//@{
 
 	/** set Kc for ciphering */
-	void setKc(uint8_t * Kc_key) { memcpy(mKc, Kc_key, 8); }
+	void setKc(uint8_t * Kc_key) { memcpy(mKc, Kc_key, 8); LOG(INFO) << "Kc set."; }
 
 	/** enable ciphering if Kc is set */
 	void enableEnciphering(unsigned i) { mCipherID = i; }
@@ -217,8 +217,8 @@ class L1Encoder {
 	*/
 	virtual void sendIdleFill();
 
-    /** Encrypt given burst in-place */
-	void encrypt(BitVector &burst, uint32_t FN) const;
+	/** Encrypt given burst in-place */
+	void encrypt(BitVector &burst, uint32_t FN);
 };
 
 
@@ -373,8 +373,9 @@ class L1Decoder {
 	void countGoodFrame();
 
 	void countBadFrame();
-    /* Decrypt burst in-place */
-	void decrypt(SoftVector &burst, uint32_t FN) const;
+
+	/* Decrypt burst in-place */
+	void decrypt(SoftVector &burst, uint32_t FN);
 };
 
 
@@ -475,18 +476,11 @@ class L1FEC {
 	    assert(mDecoder);
 	    return mDecoder->getCipherID();
 	}
-/*
-	unsigned getCipherID() const {
-	    if (encrypting) { assert(mEncoder); return mEncoder->getCipherID(); }
-	    if (decrypting) { assert(mDecoder); return mDecoder->getCipherID(); }
-	    return 0;
-	}
-*/
 
 	const bool checkEncryption() { return encrypting; }
 	const bool checkDecryption() { return decrypting; }
-	void activateEncryption(unsigned i) { assert(mEncoder); if (gConfig.getNum("GSM.Cipher")) { encrypting = true; mEncoder->enableEnciphering(i); } }
-	void activateDecryption(unsigned i) { assert(mDecoder); if (gConfig.getNum("GSM.Cipher")) { decrypting = true; mDecoder->enableDeciphering(i); } }
+	void activateEncryption(unsigned i);
+	void activateDecryption(unsigned i);
 	//@}
 
 
@@ -604,10 +598,7 @@ class XCCHL1Decoder : public L1Decoder {
 	  @return true if a new frame is ready for deinterleaving.
 	*/
 	virtual bool processBurst(const RxBurst&);
-	
-	/* Decrypt
-	*/
-//	virtual void decrypt();
+
 	/**
 	  Deinterleave the i[] to c[].
 	  This virtual method works for all block-interleaved channels (xCCHs).
@@ -764,7 +755,6 @@ class XCCHL1Encoder : public L1Encoder {
 	*/
 	void encode();
 
-//	void encrypt();
 	/**
 	  Interleave c[] to i[].
 	  GSM 05.03 4.1.4.
@@ -781,40 +771,6 @@ class XCCHL1Encoder : public L1Encoder {
 
 };
 
-/*
-class SDCCHL1Encoder : public XCCHL1Encoder {
-
-	private:
-
-	//@name FEC signal processing state.  
-	//@{
-	BitVector mE[4];
-	//@}
-
-	public:
-
-	SDCCHL1Encoder(
-		unsigned wCN,
-		unsigned wTN,
-		const TDMAMapping& wMapping,
-		L1FEC* wParent);
-
-	void encrypt();
-
-	protected:
-
-	// Send a single L2 frame.  
-	virtual void sendFrame(const L2Frame&);
-
-	//
-	//  Format i[] into timeslots and send them down for transmission.
-	//  Set stealing flags assuming a control channel.
-	//  Also updates mWriteTime.
-	//  GSM 05.03 4.1.5, 05.02 5.2.3.
-	
-	 void transmit();
-};
-*/
 
 /** L1 encoder used for full rate TCH and FACCH -- mostry from GSM 05.03 3.1 and 4.2 */
 class TCHFACCHL1Encoder : public XCCHL1Encoder {
@@ -871,8 +827,6 @@ protected:
 	*/
 	void dispatch();
 
-//	virtual void encrypt();
-
 	/** Will start the dispatch thread. */
 	void start();
 
@@ -924,9 +878,6 @@ class TCHFACCHL1Decoder : public XCCHL1Decoder {
 		deinterleave, decode, handleGoodFrame.
 	*/
 	bool processBurst( const RxBurst& );
-	
-	/** Decrypt e[] to i[].  */
-//	void decrypt();
 
 	/** Deinterleave i[] to c[].  */
 	void deinterleave(int blockOffset );
