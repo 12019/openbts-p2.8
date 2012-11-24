@@ -254,7 +254,8 @@ int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned le
 	char * key = osip_authentication_info_get_rspauth(auth_info);
 	int ret = atoi(qop); // helps to avoid curruption after osip_message_free(msg)
 	if (NULL == qop or NULL == key) return 12;
-	*data = string(key + 1, length);
+	if (data) *data = string(key + 1, length);
+	else return 13;
 	osip_message_free(msg); // only cleanup if extraction succeed
 	return ret;
 }
