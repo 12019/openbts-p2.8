@@ -723,7 +723,7 @@ void L3SI3RestOctets::text(ostream& os) const
 		os << "CBQ=" << mCBQ;
 		os << " CELL_RESELECT_OFFSET=" << mCELL_RESELECT_OFFSET;
 		os << " TEMPORARY_OFFSET=" << mTEMPORARY_OFFSET;
-		os << " PANALTY_TIME=" << mPENALTY_TIME;
+		os << " PENALTY_TIME=" << mPENALTY_TIME;
 	}
 }
 
