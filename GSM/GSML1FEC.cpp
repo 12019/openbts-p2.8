@@ -39,6 +39,7 @@ extern "C" {
 #include <Logger.h>
 #include <assert.h>
 #include <math.h>
+#include <errno.h>
 
 #undef WARNING
 
@@ -320,7 +321,11 @@ unsigned L1Encoder::ARFCN() const
 void L1Encoder::encrypt(BitVector &burst, uint32_t FN)
 {
     ubit_t ks[114];
-    osmo_a5(mCipherID, mKc, FN, ks, NULL);
+    if (-ENOTSUP == osmo_a5(mCipherID, mKc, FN, ks, NULL)) {
+	LOG(ERR) << "A5/" << mCipherID << " not supported by libosmocore!";
+	return;
+    }
+    
     unsigned e = burst.xor_apply(ks, 114);
     if (e) LOG(ERR) << "Error while applying gamma " << osmo_hexdump_nospc(ks, 114) << " to " << burst << ": " << e;
     else LOG(DEBUG) << "gamma " << osmo_hexdump_nospc(ks, 114) << " applied to " << burst;
@@ -415,7 +420,10 @@ void L1Decoder::countBadFrame()
 void L1Decoder::decrypt(SoftVector &burst, uint32_t FN)
 {
     ubit_t ks[114];
-    osmo_a5(mCipherID, mKc, FN, NULL, ks);
+    if (-ENOTSUP == osmo_a5(mCipherID, mKc, FN, ks, NULL)) {
+	LOG(ERR) << "A5/" << mCipherID << " not supported by libosmocore!";
+	return;
+    }
     unsigned e = burst.xor_apply(ks, 114);
     if (e) LOG(ERR) << "Error while applying gamma " << osmo_hexdump_nospc(ks, 114) << " to " << burst << ": " << e;
     else LOG(DEBUG) << "gamma " << osmo_hexdump_nospc(ks, 114) << "applied to " << burst;
