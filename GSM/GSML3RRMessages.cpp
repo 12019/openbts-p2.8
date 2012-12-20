@@ -737,7 +737,9 @@ void L3GPRSSuspensionRequest::parseBody(const L3Frame &src, size_t& rp)
 void L3ClassmarkChange::parseBody(const L3Frame &src, size_t &rp)
 {
 	mClassmark.parseLV(src,rp);
-	mHaveAdditionalClassmark = mAdditionalClassmark.parseTLV(0x20,src,rp);
+//	mHaveAdditionalClassmark = mAdditionalClassmark.parseTLV(0x20,src,rp);
+	mHaveAdditionalClassmark = 0;
+// FIXME: implement additional classmark parsing
 }
 
 size_t L3ClassmarkChange::l2BodyLength() const
