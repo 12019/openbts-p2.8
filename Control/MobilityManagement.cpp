@@ -225,6 +225,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		delete msg;
 	}
 
+	if (IMSIAttach && gConfig.defines("Control.LUR.QueryClassmarkIgnoreTMSI")) IMSIAttach = 1;
 	// Query for classmark?
 	if (IMSIAttach && gConfig.defines("Control.LUR.QueryClassmark")) {
 		DCCH->send(L3ClassmarkEnquiry());
