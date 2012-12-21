@@ -278,7 +278,7 @@ int tmsis(int argc, char** argv, ostream& os)
 	}
 
 	if (argc!=1) return BAD_NUM_ARGS;
-	os << "TMSI       IMSI            age  used A5" << endl;
+	os << "TMSI       IMSI            age  used A5/1 A5/2 A5/3" << endl;
 	gTMSITable.dump(os);
 	return SUCCESS;
 }

@@ -169,7 +169,10 @@ unsigned TMSITable::TMSI(const char* IMSI) const
 	return TMSI;
 }
 
-
+void printA5(unsigned a5_support, ostream& os)
+{
+    os << "   " << ((a5_support & 4) >> 2) << "    " << ((a5_support & 2) >> 1) << "    " << (a5_support & 1);
+}
 
 void printAge(unsigned seconds, ostream& os)
 {
@@ -206,7 +209,7 @@ void TMSITable::dump(ostream& os) const
 		os << sqlite3_column_text(stmt,1) << ' ';
 		printAge(now-sqlite3_column_int(stmt,2),os); os << ' ';
 		printAge(now-sqlite3_column_int(stmt,3),os); os << ' ';
-		os << sqlite3_column_int(stmt, 4) << ' ';
+		printA5(sqlite3_column_int(stmt, 4), os);
 		os << endl;
 	}
 	sqlite3_finalize(stmt);
@@ -234,7 +237,7 @@ bool TMSITable::IMEI(const char* IMSI, const char *IMEI)
 bool TMSITable::classmark(const char* IMSI, const GSM::L3MobileStationClassmark2& classmark)
 {
 	int A5Bits = (classmark.A5_1()<<2) + (classmark.A5_2()<<1) + classmark.A5_3();
-	LOG(DEBUG) << "A5/1 = " << classmark.A5_1() << " A5/2 = " << classmark.A5_2() << "A5/3 = " << classmark.A5_3();
+	LOG(DEBUG) << "A5/1 = " << classmark.A5_1() << " A5/2 = " << classmark.A5_2() << " A5/3 = " << classmark.A5_3();
 	char query[1024];
 	snprintf(query, 1024,
 		"UPDATE TMSI_TABLE SET A5_SUPPORT=%u,ACCESSED=%u,POWER_CLASS=%u "
