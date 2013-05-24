@@ -39,7 +39,7 @@
 
 #include <Sockets.h>
 #include <Globals.h>
-
+#include "ControlCommon.h"
 
 namespace SIP {
 
@@ -178,14 +178,15 @@ public:
 		Can throw SIPTimeout().
 		@return True on success.
 	*/
-	int Register(Method wMethod=SIPRegister, string *RAND = NULL, string *Kc = NULL, const char *IMSI = NULL, const char *SRES = NULL);
+	bool Register(Method wMethod, Control::AuthenticationParameters& authParams);
 
 	/**
 		Send sip unregister and look at return msg.
 		Can throw SIPTimeout().
 		@return True on success.
 	*/
-	bool unregister() { return (Register(SIPUnregister)); };
+	bool unregister(Control::AuthenticationParameters& authParams)
+		{ return Register(SIPUnregister, authParams); }
 
 	//@}
 

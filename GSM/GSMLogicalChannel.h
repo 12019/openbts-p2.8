@@ -38,6 +38,7 @@
 extern "C" {
 #include <osmocom/core/utils.h>
 }
+#include <ControlCommon.h>
 #include "GSML1FEC.h"
 #include "GSMSAPMux.h"
 #include "GSML2LAPDm.h"
@@ -345,14 +346,22 @@ class SDCCHLogicalChannel : public LogicalChannel {
     - calls always succeed
 */
 class AuthTestLogicalChannel : public LogicalChannel {
+
     private:
-	L3SRES atSRES;
+	Control::AuthenticationParameters authParams;
+
     public:
-	AuthTestLogicalChannel(L3SRES s) { atSRES = L3SRES(s.value()); }
-	void send(const L3Frame& frame, unsigned SAPI=0) {}
+        AuthTestLogicalChannel(const Control::AuthenticationParameters& ap):authParams(ap) {}
+	void send(const L3Frame& frame, unsigned SAPI = 0) {}
+
 // Needed for special handling inside Control::getMessage(LCH);
 	ChannelType type() const { return AuthTestLCHType; }
-	L3SRES getSRES() const { return atSRES; }
+	L3SRES getSRES() {
+	    L3SRES atSRES;
+	    if (authParams.isSRESset()) return authParams.SRES();
+	    return atSRES;
+	}
+
 // This will be interpreted as "Ciphering Error" by authentication routine
 	L3Frame * recv(unsigned timeout_ms = 15000, unsigned SAPI = 0) { return NULL; }
 };

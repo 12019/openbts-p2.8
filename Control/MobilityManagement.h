@@ -27,12 +27,17 @@
 #ifndef MOBILITYMANAGEMENT_H
 #define MOBILITYMANAGEMENT_H
 
+#include "ControlCommon.h"
 
 namespace GSM {
 class LogicalChannel;
 class L3CMServiceRequest;
 class L3LocationUpdatingRequest;
 class L3IMSIDetachIndication;
+class L3SRES;
+class L3RAND;
+class L3CipheringKeySequenceNumber;
+class L3MobileIdentity;
 };
 
 namespace Control {
@@ -42,6 +47,8 @@ void CMServiceResponder(const GSM::L3CMServiceRequest* cmsrq, GSM::LogicalChanne
 void IMSIDetachController(const GSM::L3IMSIDetachIndication* idi, GSM::LogicalChannel* DCCH);
 
 void LocationUpdatingController(const GSM::L3LocationUpdatingRequest* lur, GSM::LogicalChannel* DCCH);
+bool registerIMSI(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH);
+bool authenticate(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH);
 
 }
 

@@ -32,24 +32,21 @@
 #include <math.h>
 
 #include <config.h>
-
-// #include <Config.h>
 #include <Logger.h>
-
+#include <ControlCommon.h>
 #include <GSMConfig.h>
 #include <GSMLogicalChannel.h>
 #include <GSML3MMElements.h>
-#include <ControlCommon.h>
 #include <TransactionTable.h>
 #include <TRXManager.h>
 #include <PowerManager.h>
 #include <TMSITable.h>
 #include <RadioResource.h>
 #include <CallControl.h>
-
+#include <MobilityManagement.h>
 #include <Globals.h>
-
-#include "CLI.h"
+#include <SubscriberRegistry.h>
+#include <CLI.h>
 
 #undef WARNING
 
@@ -750,6 +747,18 @@ int power(int argc, char **argv, ostream& os)
 	return SUCCESS;
 }
 
+int callID(int argc, char** argv, ostream& os)
+{
+    if (argc != 2) return BAD_NUM_ARGS;
+    char * IMSI = argv[1];
+    if (strnlen(IMSI, 32) > 15) {
+	os << IMSI << " is not a valid IMSI" << endl;
+	return BAD_VALUE;
+    }
+    os << "IMSI "<< IMSI << " caller-id number " << gSubscriberRegistry.getCLIDLocal(IMSI) << endl;
+    return SUCCESS;
+}
+
 int getkc(int argc, char** argv, ostream& os)
 {
     if (argc != 2) return BAD_NUM_ARGS;
@@ -762,9 +771,29 @@ int getkc(int argc, char** argv, ostream& os)
     return SUCCESS;
 }
 
+int testcall(int argc, char **argv, ostream& os)
+{
+	if (argc!=3) return BAD_NUM_ARGS;
+	char *IMSI = argv[1];
+	if (strlen(IMSI)!=15) {
+		os << IMSI << " is not a valid IMSI" << endl;
+		return BAD_VALUE;
+	}
+
+	Control::TransactionEntry *transaction = new Control::TransactionEntry(
+		gConfig.getStr("SIP.Proxy.Speech").c_str(),
+		GSM::L3MobileIdentity(IMSI),
+		NULL,
+		GSM::L3CMServiceType::TestCall,
+		GSM::L3CallingPartyBCDNumber("0"),
+		GSM::Paging);
+	Control::initiateMTTransaction(transaction, GSM::TCHFType, 1000 * atoi(argv[2]));
+	return SUCCESS;
+}
+
 int testauth(int argc, char** argv, ostream& os)
 {
-    if (argc != 2 && argc != 3) return BAD_NUM_ARGS;
+    if (argc != 3 && argc != 4) return BAD_NUM_ARGS;
 
     char * IMSI = argv[1];
     if (strnlen(IMSI, 32) > 15) {
@@ -772,13 +801,16 @@ int testauth(int argc, char** argv, ostream& os)
       return BAD_VALUE;
     }
 
-    uint32_t sres = 0;// use SRES is available
-    //C++ standard guarantees that unsigned long is at least 32 bits wide so strtoul is ok
-    if (3 == argc) sres = strtoul(argv[2], NULL, 10);
-
-    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(GSM::L3SRES(sres));
     GSM::L3MobileIdentity mobID(IMSI);
-    os << "authentication result for " << IMSI << ": " << Control::attemptAuth(mobID, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
+    Control::AuthenticationParameters authParams(mobID);
+    authParams.set_RAND(string(argv[2]));
+    uint32_t sres = 0;
+    if (4 == argc) { //C++ standard guarantees that unsigned long is at least 32 bits wide so strtoul is ok
+	sres = strtoul(argv[2], NULL, 10);
+	authParams.set_SRES(sres);
+    }
+    GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(authParams);
+    os << "authentication result for " << IMSI << ": " << Control::authenticate(authParams, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
     return SUCCESS;
 }
 
@@ -824,6 +856,7 @@ void Parser::addCommands()
 	//addCommand("sendrrlp", sendrrlp, "<IMSI> <hexstring> -- send RRLP message <hexstring> to <IMSI>.");
 	addCommand("load", printStats, "-- print the current activity loads.");
 	addCommand("cellid", cellID, "[MCC MNC LAC CI] -- get/set location area identity (MCC, MNC, LAC) and cell ID (CI)");
+	addCommand("callid", callID, "[IMSI] -- get caller if for a given IMSI");
 	addCommand("calls", calls, "-- print the transaction table");
 	addCommand("config", config, "[] OR [patt] OR [key val(s)] -- print the current configuration, print configuration values matching a pattern, or set/change a configuration value");
 	addCommand("configsave", configsave, "<path> -- write the current configuration to a file");
@@ -835,7 +868,8 @@ void Parser::addCommands()
 	addCommand("page", page, "[IMSI time] -- dump the paging table or page the given IMSI for the given period");
 	addCommand("chans", chans, "-- report PHY status for active channels");
 	addCommand("power", power, "[minAtten maxAtten] -- report current attentuation or set min/max bounds");
-	addCommand("testauth", testauth, "<IMSI> [SRES] -- perform test authentication against for IMSI (using optional SRES) against backend");
+	addCommand("testcall", testcall, "IMSI time -- initiate a test call to a given IMSI with a given paging time");
+	addCommand("testauth", testauth, "<IMSI> <RAND> -- perform test authentication against for IMSI (using provided RAND) against backend");
 	addCommand("getkc", getkc, "<IMSI> -- obtain encryption key Kc and its sequence number if possible");
         addCommand("rxgain", rxgain, "[newRxgain] -- get/set the RX gain in dB");
         addCommand("noise", noise, "-- report receive noise level in RSSI dB");

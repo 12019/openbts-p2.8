@@ -32,9 +32,10 @@
 #include <osipparser2/sdp_message.h>
 #include <osipparser2/osip_md5.h>
 
+#include "ControlCommon.h"
+#include "SIPMessage.h"
 #include "SIPInterface.h"
 #include "SIPUtility.h"
-#include "SIPMessage.h"
 
 using namespace std;
 using namespace SIP;
@@ -51,7 +52,7 @@ void openbts_message_init(osip_message_t ** msg){
 	osip_message_set_user_agent(*msg, strdup(tag));
 }
 
-osip_message_t * SIP::sip_register( const char * sip_username, short timeout, short wlocal_port, const char * local_ip, const char * proxy_ip, const char * from_tag, const char * via_branch, const char * call_id, int cseq, string *RAND, const char *IMSI, const char *SRES) {
+osip_message_t * SIP::sip_register( const char * sip_username, short timeout, short wlocal_port, const char * local_ip, const char * proxy_ip, const char * from_tag, const char * via_branch, const char * call_id, int cseq, Control::AuthenticationParameters& ap) {
 
  	char local_port[10];
 	sprintf(local_port,"%i",wlocal_port);	
@@ -130,13 +131,13 @@ osip_message_t * SIP::sip_register( const char * sip_username, short timeout, sh
 
 	// add contact
 	osip_list_add(&request->contacts, con, -1);
-	if (SRES) {	// add authentication
+	if (ap.isSRESset()) {	// add authentication
 		osip_authorization_t *auth;
 		osip_authorization_init(&auth);
 		osip_authorization_set_auth_type(auth, osip_strdup("Digest"));
-		osip_authorization_set_nonce(auth, osip_strdup(RAND->c_str()));
-		osip_authorization_set_uri(auth, osip_strdup(IMSI));
-		osip_authorization_set_response(auth, osip_strdup(SRES));
+		osip_authorization_set_nonce(auth, osip_strdup(ap.get_RAND()));
+		osip_authorization_set_uri(auth, osip_strdup(ap.mobileID().digits()));
+		osip_authorization_set_response(auth, osip_strdup(ap.get_SRES()));
 		osip_list_add(&request->authorizations, auth, -1);
 	}
 
@@ -218,7 +219,7 @@ osip_message_t * SIP::sip_message( const char * dialed_number, const char * sip_
 	}
 
 	// Content-Length
-	sprintf(temp_buf,"%u",strlen(message));
+	sprintf(temp_buf, "%lu", strlen(message));
 	osip_message_set_content_length(request, strdup(temp_buf));
 
 	// Payload.

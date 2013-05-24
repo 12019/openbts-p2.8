@@ -408,10 +408,6 @@ TCHFACCHLogicalChannel::TCHFACCHLogicalChannel(
 }
 
 
-
-
-
-
 bool LogicalChannel::waitForPrimitive(Primitive primitive, unsigned timeout_ms)
 {
 	bool waiting = true;

@@ -31,6 +31,7 @@
 
 #include <time.h>
 #include "GSML3MMElements.h"
+#include <SubscriberRegistry.h>
 #include <Logger.h>
 #include <algorithm>
 #include <cstdlib>
@@ -236,8 +237,16 @@ void L3RAND::writeV(L3Frame& dest, size_t &wp) const
 }
 
 void L3RAND::text(ostream& os) const
-{
-	os << hex << "0x" << mRUpper << mRLower << dec;
+{ // need exactly 32 characters for successful parsing by inflexible osmo_hexparse(...)
+    ostringstream os_h, os_l, os_x;
+    os_h.width(16);
+    os_h.fill('0');
+    os_h << hex << mRUpper;
+    os_l.width(16);
+    os_l.fill('0');
+    os_l << hex << mRLower;
+    os_x << os_h.str() << os_l.str();
+    os << os_x.str();
 }
 
 void L3SRES::parseV(const L3Frame& src, size_t &rp)
@@ -248,19 +257,6 @@ void L3SRES::parseV(const L3Frame& src, size_t &rp)
 void L3SRES::text(ostream& os) const
 {
 	os << hex << "0x" << mValue << dec;
-}
-
-inline char rnd() {
-    const char * range = "abcdef0123456789";
-    return range[rand() % sizeof(range)];
-}
-
-string L3RAND::getRAND(size_t length)
-{
-    string random;
-    random.reserve(length);
-    generate_n(std::back_inserter(random), length, rnd);
-    return random;
 }
 
 // vim: ts=4 sw=4

@@ -49,7 +49,6 @@
 
 using namespace std;
 using namespace SIP;
-
 using namespace GSM;
 using namespace Control;
 
@@ -62,10 +61,17 @@ void SIPMessageMap::write(const std::string& call_id, osip_message_t * msg)
 {
 	LOG(DEBUG) << "call_id=" << call_id << " msg=" << msg;
 	OSIPMessageFIFO * fifo = mMap.readNoBlock(call_id);
-	if( fifo==NULL ) {
-		// FIXME -- If this write fails, send "call leg non-existent" response on SIP interface.
-		LOG(NOTICE) << "missing SIP FIFO "<<call_id;
-		throw SIPError();
+	if( fifo == NULL ) {
+	    char * str;
+	    size_t msgSize;
+	    osip_message_to_str(msg, &str, &msgSize);
+	    if (!str) {
+		LOG(ERR) << "osip_message_to_str produced a NULL pointer!";
+		return;
+	    }
+	    // FIXME -- If this write fails, send "call leg non-existent" response on SIP interface.
+	    LOG(ERR) << "missing SIP FIFO " << call_id << " SIP: " << str;
+	    throw SIPError();
 	}
 	LOG(DEBUG) << "write on fifo " << fifo;
 	fifo->write(msg);	
@@ -76,8 +82,8 @@ osip_message_t * SIPMessageMap::read(const std::string& call_id, unsigned readTi
 	LOG(DEBUG) << "call_id=" << call_id;
 	OSIPMessageFIFO * fifo = mMap.readNoBlock(call_id);
 	if (!fifo) {
-		LOG(NOTICE) << "missing SIP FIFO "<<call_id;
-		throw SIPError();
+	    LOG(ERR) << "missing SIP FIFO " << call_id;
+	    throw SIPError();
 	}	
 	LOG(DEBUG) << "blocking on fifo " << fifo;
 	osip_message_t * msg =  fifo->read(readTimeout);	
@@ -251,7 +257,7 @@ void SIPInterface::drive()
 		// Don't free call_id_num.  It points into msg->call_id.
 		char * call_id_num = osip_call_id_get_number(msg->call_id);	
 		if( call_id_num == NULL ) {
-			LOG(WARNING) << "message with no call id";
+			LOG(ERR) << "message with no call id";
 			throw SIPError();
 		}
 		LOG(DEBUG) << "got message " << msg << " with call id " << call_id_num << " and writing it to the map.";

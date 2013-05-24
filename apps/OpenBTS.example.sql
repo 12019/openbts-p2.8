@@ -86,6 +86,8 @@ INSERT INTO "CONFIG" VALUES('GSM.Timer.T3113','10000',0,0,'Paging timer T3113 in
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3122Max','255000',0,0,'Maximum allowed value for T3122, the RACH holdoff timer, in milliseconds.');
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3122Min','2000',0,0,'Minimum allowed value for T3122, the RACH holdoff timer, in milliseconds.');
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3212','30',0,0,'Registration timer T3212 period in minutes.  Should be a factor of 6.  Set to 0 to disable periodic registration.  Should be smaller than SIP registration period.');
+INSERT INTO "CONFIG" VALUES('GSM.Authentication','0',0,0,'1 = turn on authentication, 0 = turn off authentication');
+INSERT INTO "CONFIG" VALUES('GSM.Encryption','0',0,0,'1 = turn on encryption A5/*, 0 = turn off encryption');
 INSERT INTO "CONFIG" VALUES('Log.Alarms.Max','20',0,0,'Maximum number of alarms to remember inside the application.');
 INSERT INTO "CONFIG" VALUES('Log.Level','WARNING',0,0,'Default logging level when no other level is defined for a file.');
 INSERT INTO "CONFIG" VALUES('Log.Level.CallControl.cpp','INFO',0,1,'Default configuration logs a trace at L3.');
@@ -125,4 +127,5 @@ INSERT INTO "CONFIG" VALUES('TRX.IP','127.0.0.1',1,0,'IP address of the transcei
 INSERT INTO "CONFIG" VALUES('TRX.Port','5700',1,0,'IP port of the transceiver application.  Static.');
 INSERT INTO "CONFIG" VALUES('TRX.RadioFrequencyOffset','128',1,0,'Fine-tuning adjustment for the transceiver master clock.  Roughly 170 Hz/step.  Set at the factory.  Do not adjust without proper calibration.  Static.');
 INSERT INTO "CONFIG" VALUES('TRX.TxAttenOffset','2',1,0,'Hardware-specific gain adjustment for transmitter, matched to the power amplifier, expessed as an attenuationi in dB.  Set at the factory.  Do not adjust without proper calibration.  Static.');
+INSERT INTO "CONFIG" VALUES('TestCall.Port','28670',0,0,'Port for exchanging L3 packets with the testcall feature.');
 COMMIT;

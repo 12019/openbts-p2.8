@@ -29,7 +29,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-
 #include <sys/types.h>
 #include <semaphore.h>
 
@@ -38,13 +37,12 @@
 #include <Logger.h>
 #include <Timeval.h>
 #include <GSMConfig.h>
-#include <ControlCommon.h>
 #include <GSMCommon.h>
-
 #include "SIPInterface.h"
 #include "SIPUtility.h"
-#include "SIPMessage.h"
 #include "SIPEngine.h"
+#include "SIPMessage.h"
+
 
 #undef WARNING
 
@@ -244,7 +242,7 @@ void SIPEngine::user( const char * wCallID, const char * IMSI, const char *origI
 	mRemoteDomain = string(origHost);
 }
 
-int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned length)
+int osip_extract(osip_message_t *msg, int status, string *data, unsigned length)
 {//extract 'length' bytes from oSIP message with code 'status', return extracted success (<8) or error code (>9)
 	if (msg->status_code != status) return 10;
 	osip_authentication_info_t * auth_info;
@@ -260,7 +258,7 @@ int osip_extract(osip_message_t *msg, unsigned status, string *data, unsigned le
 	return ret;
 }
 
-int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *IMSI, const char *SRES)
+bool SIPEngine::Register(Method wMethod, Control::AuthenticationParameters& authParams)
 {// return CKSN or error code (>300), 200 + cipher_id == OK
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState << " " << wMethod << " callID " << mCallID;
 
@@ -281,7 +279,7 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
 			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
-			RAND, IMSI, SRES
+			authParams
 		); 
 	} else if (wMethod == SIPUnregister ) {
 		reg = sip_register( mSIPUsername.c_str(), 
@@ -289,7 +287,7 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 			mSIPPort, mSIPIP.c_str(), 
 			mProxyIP.c_str(), mMyTag.c_str(), 
 			mViaBranch.c_str(), mCallID.c_str(), mCSeq,
-			NULL, NULL, NULL
+			authParams
 		);
 	} else { assert(0); }
  
@@ -311,23 +309,28 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 		}
 
 		assert(msg);
+		string Kc, RAND;
 		int status = msg->status_code;
 		LOG(INFO) << "received status " << msg->status_code << " " << msg->reason_phrase;
 		if (status == 404) { LOG(INFO) << "REGISTER fail -- not found"; return 404; }
 		if (status > 200 && status != 401) { LOG(NOTICE) << "REGISTER unexpected response " << status; return 302; }
 
-		int ext = osip_extract(msg, 200, Kc, 16);// extrat Kc from response
+		int ext = osip_extract(msg, 200, &Kc, 16);// extrat Kc from response
 		if (ext < 8) {
-		    LOG(INFO) << "REGISTER success: found " << ext << " in response: " << *Kc;
-		    return 200 + ext;//success
+		    LOG(INFO) << "REGISTER success: found " << ext << " in response: " << Kc;
+		    authParams.set_Kc(Kc);
+		    authParams.set_a5(ext);
+		    return true;//success
 		}
-		int cksn = osip_extract(msg, 401, RAND, 32);
+		int cksn = osip_extract(msg, 401, &RAND, 32);
 		if (cksn < 8) {// if rand is included on 401 unauthorized, then the challenge-response game is afoot
-		    LOG(INFO) << "REGISTER " << cksn << " challenge RAND=" << *RAND;
-		    return cksn;
+		    LOG(INFO) << "REGISTER " << cksn << " challenge RAND=" << RAND;
+		    authParams.set_RAND(RAND);
+		    authParams.set_CKSN(cksn);
+		    return true;
 		} else {
 		    LOG(DEBUG) << "REGISTER fail: unauthorized";
-		    return 401;
+		    return false;
 		}
 	}
 
@@ -339,7 +342,7 @@ int SIPEngine::Register(Method wMethod , string *RAND, string *Kc, const char *I
 	osip_message_free(reg);
 	osip_message_free(msg);
 	gSIPInterface.removeCall(mCallID);
-	return 666;
+	return false;
 }
 
 
@@ -432,7 +435,7 @@ SIPState SIPEngine::SOSSendINVITE(short wRtp_port, unsigned  wCodec)
 			gConfig.getStr("Control.Emergency.Geolocation").c_str());
 		osip_message_set_content_type(invite, strdup("application/pidf+xml"));
 		char tmp[20];
-		sprintf(tmp,"%u",strlen(xml));
+		sprintf(tmp, "%lu", strlen(xml));
 		osip_message_set_content_length(invite, strdup(tmp));
 		osip_message_set_body(invite,xml,strlen(xml));
 	}

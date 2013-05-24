@@ -38,13 +38,10 @@
 #include <Interthread.h>
 #include <Timeval.h>
 
-
 #include <GSML3CommonElements.h>
 #include <GSML3MMElements.h>
 #include <GSML3CCElements.h>
 #include <GSML3RRMessages.h>
-#include <SIPEngine.h>
-
 #include "TMSITable.h"
 
 
@@ -65,6 +62,60 @@ namespace Control {
 
 class TransactionEntry;
 class TransactionTable;
+
+enum a3a8 { MILENAGE, COMP128v1 };
+
+class AuthenticationParameters {
+
+	private:
+	GSM::L3MobileIdentity mMobileID;
+	GSM::L3SRES mSRES;
+	GSM::L3RAND mRAND;
+	GSM::L3CipheringKeySequenceNumber mCKSN;
+	string mKC;
+	bool mRANDset;
+	bool mKCset;
+	bool mSRESset;
+	enum a3a8 mAlg;
+	unsigned a5;
+
+	public:
+
+	AuthenticationParameters(GSM::L3MobileIdentity wMobileID)
+	    :mMobileID(wMobileID),
+	    mSRES(0),
+	    mRAND(0,0),
+	    mCKSN(0),
+	    mKC(""),
+	    mRANDset(false),
+	    mKCset(false),
+	    mSRESset(false),
+	    mAlg(COMP128v1),
+	    a5(0)
+	{}
+
+	void set_CKSN(unsigned wCKSN) { mCKSN = GSM::L3CipheringKeySequenceNumber(wCKSN); }
+	void set_SRES(uint32_t wSRES) { mSRES = GSM::L3SRES(wSRES); mSRESset = true; }
+	void set_alg(enum a3a8 a) { mAlg = a; }
+	enum a3a8 get_alg() { return mAlg; }
+	void set_a5(unsigned alg) { a5 = alg; }
+	unsigned get_a5() { return a5; }
+
+	const char * get_RAND() const;
+	void set_RAND(string RAND);
+	const char * get_Kc() const { return mKC.c_str(); }
+	void set_Kc(string key) { mKC = key; mKCset = true; }
+	const char * get_SRES() const;
+
+	const GSM::L3RAND& RAND() const { return mRAND; }
+	const GSM::L3CipheringKeySequenceNumber& CKSN() const { return mCKSN; }
+	const GSM::L3MobileIdentity& mobileID() const { return mMobileID; }
+	const GSM::L3SRES SRES() const { return mSRES; }
+
+	bool isRANDset() { return mRANDset; }
+	bool isSRESset() { return mSRESset; }
+	bool isKCset() { return mKCset; }
+};
 
 /**@name Call control time-out values (in ms) from ITU-T Q.931 Table 9-1 and GSM 04.08 Table 11.4. */
 //@{

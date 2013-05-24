@@ -270,12 +270,13 @@ string SubscriberRegistry::getIMSI(string ISDN)
 
 string SubscriberRegistry::getCLIDLocal(string IMSI)
 {
-	if (IMSI.empty()) {
-		LOG(WARNING) << "SubscriberRegistry::getCLIDLocal attempting lookup of NULL IMSI";
-		return "";
-	}
-	LOG(INFO) << "getCLIDLocal(" << IMSI << ")";
-	return sqlQuery("callerid", "sip_buddies", "name", IMSI);
+    if (IMSI.empty()) {
+	LOG(WARNING) << "SubscriberRegistry::getCLIDLocal attempting lookup of NULL IMSI";
+	return "";
+    }
+    string name = IMSI.substr(0,4) == "IMSI" ? IMSI : "IMSI" + IMSI;
+    LOG(INFO) << "getCLIDLocal(" << name << ")";
+    return sqlQuery("callerid", "sip_buddies", "name", name);
 }
 
 

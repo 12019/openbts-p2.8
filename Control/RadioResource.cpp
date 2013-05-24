@@ -304,6 +304,9 @@ void Control::PagingResponseHandler(const L3PagingResponse* resp, LogicalChannel
 		case L3CMServiceType::MobileTerminatedCall:
 			MTCStarter(transaction, DCCH, mobileID);
 			return;
+	case L3CMServiceType::TestCall:
+			TestCall(transaction, DCCH);
+			return;
 		case L3CMServiceType::MobileTerminatedShortMessage:
 			MTSMSController(transaction, DCCH);
 			return;

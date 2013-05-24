@@ -237,9 +237,10 @@ void UDPSocket::open(unsigned short localPort)
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(localPort);
-	if (bind(mSocketFD,(struct sockaddr*)&address,length)<0) {
-		perror("bind() failed");
-		throw SocketError();
+	if (bind(mSocketFD, (struct sockaddr*) &address, length) < 0) {
+	    std::cerr << "binding to " << localPort << " port - ";
+	    perror("bind() failed");
+	    throw SocketError();
 	}
 }
 
@@ -283,7 +284,8 @@ void UDDSocket::open(const char* localPath)
 	address.sun_family = AF_UNIX;
 	strcpy(address.sun_path,localPath);
 	unlink(localPath);
-	if (bind(mSocketFD,(struct sockaddr*)&address,length)<0) {
+	if (bind(mSocketFD, (struct sockaddr*) &address, length) < 0) {
+	    std::cerr << "binding to " << localPath << " path - ";
 		perror("bind() failed");
 		throw SocketError();
 	}
