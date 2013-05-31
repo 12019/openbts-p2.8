@@ -33,8 +33,10 @@
 #include "GSML3Message.h"
 #include "GSML3CommonElements.h"
 #include "GSML3MMElements.h"
-
-
+extern "C" {
+#include <osmocom/core/utils.h>
+#include <osmocom/gsm/a5.h>
+}
 
 namespace GSM {
 
@@ -364,6 +366,20 @@ class L3MMInformation : public L3MMMessage {
 	size_t l2BodyLength() const;
 	void writeBody(L3Frame&,size_t&) const;
 	void text(std::ostream&) const;
+};
+
+class L3AUTN : public L3MMMessage {
+// AUTN message from UMTS, 64 bits, used in heterogeneous deployments
+private:
+
+    uint64_t autn;
+
+public:
+
+    L3AUTN(uint64_t data):L3MMMessage(), autn(data) {}
+    size_t l2BodyLength() const { return 8; }
+    void writeBody(L3Frame& dest, size_t& wp) const { dest.writeField(wp, autn, 64); }
+    void text(std::ostream& os) const { L3MMMessage::text(os); os << "AUTN: " << autn; }
 };
 
 
