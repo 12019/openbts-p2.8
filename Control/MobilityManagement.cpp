@@ -389,7 +389,7 @@ bool Control::auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel
 }
 
 bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
-    string RAND = gSubscriberRegistry.imsiGet(string("IMSI") + string(authParams.get_mobileID()), "rand");
+    string IMSI = string("IMSI") + string(authParams.get_mobileID()), RAND = gSubscriberRegistry.imsiGet(IMSI, "rand");
     if (0 == RAND.length()) {
 	LOG(DEBUG) << "Failed to obtain RAND for " << authParams.mobileID();
 	return false;
@@ -397,7 +397,7 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
     authParams.set_RAND(RAND);
     authParams.set_SRES(auth_re(authParams, LCH));
 
-    string RES = gSubscriberRegistry.imsiGet(string("IMSI") + string(authParams.get_mobileID()), "sres");
+    string RES = gSubscriberRegistry.imsiGet(IMSI, "sres");
     if (RES == authParams.get_SRES()) { // verify SRES
 	LOG(DEBUG) << "Local authentication success for " << authParams.mobileID();
 	cipher(authParams, LCH);
