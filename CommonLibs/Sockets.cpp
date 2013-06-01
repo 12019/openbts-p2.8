@@ -29,7 +29,7 @@
 #include <fcntl.h>
 #include <cstdio>
 #include <sys/select.h>
-
+#include <string>
 #include "Threads.h"
 #include "Sockets.h"
 #include <stdio.h>
@@ -114,34 +114,38 @@ DatagramSocket::~DatagramSocket()
 
 int DatagramSocket::write( const char * message, size_t length )
 {
-	assert(length<=MAX_UDP_LENGTH);
-	int retVal = sendto(mSocketFD, message, length, 0,
-		(struct sockaddr *)mDestination, addressSize());
-	if (retVal == -1 ) perror("DatagramSocket::write() failed");
-	return retVal;
+    assert(length <= MAX_UDP_LENGTH);
+    int retVal = sendto(mSocketFD, message, length, 0, (struct sockaddr *)mDestination, addressSize());
+    if (retVal == -1 ) {
+	std::string e = std::string(message) + std::string(" -> ") + std::string(mDestination) + std::string("DatagramSocket::write() failed");
+	perror(e.c_str());
+    }
+    return retVal;
 }
 
 int DatagramSocket::writeBack( const char * message, size_t length )
 {
-	assert(length<=MAX_UDP_LENGTH);
-	int retVal = sendto(mSocketFD, message, length, 0,
-		(struct sockaddr *)mSource, addressSize());
-	if (retVal == -1 ) perror("DatagramSocket::write() failed");
-	return retVal;
+    assert(length <= MAX_UDP_LENGTH);
+    int retVal = sendto(mSocketFD, message, length, 0, (struct sockaddr *)mSource, addressSize());
+    if (retVal == -1 ) {
+	std::string e = std::string(" -> ") + std::string(mSource) + std::string("DatagramSocket::writeBack() failed");
+	perror(e.c_str());
+    }
+    return retVal;
 }
 
 
 
 int DatagramSocket::write( const char * message)
 {
-	size_t length=strlen(message)+1;
-	return write(message,length);
+	size_t length = strlen(message) + 1;
+	return write(message, length);
 }
 
 int DatagramSocket::writeBack( const char * message)
 {
-	size_t length=strlen(message)+1;
-	return writeBack(message,length);
+	size_t length = strlen(message) + 1;
+	return writeBack(message, length);
 }
 
 

@@ -173,16 +173,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// Try to register the IMSI.
 	// This will be set true if registration succeeded in the SIP world.
 
-	bool success = false;
-	AuthenticationParameters authParams(mobileID);
-	success = registerIMSI(authParams, DCCH);
-	LOG(INFO) << name << " registration result: " << success << endl;
-
-	if (success && (gConfig.getNum("GSM.Authentication") || gConfig.getNum("GSM.Encryption")))
-	{
-		success = authenticate(authParams, DCCH);
-		LOG(INFO) << name << " authentication result: " << success << endl;
-	}
+	bool success = auth_reg(mobileID, DCCH);
 
 	// This allows us to configure Open Registration
 	bool openRegistration = false;
@@ -317,7 +308,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	return;
 }
 
-bool Control::registerIMSI(Control::AuthenticationParameters& authParams, GSM::LogicalChannel* LCH)
+bool registerIMSI(Control::AuthenticationParameters& authParams, GSM::LogicalChannel* LCH)
 {
 	// Try to register the IMSI.
 	// This will be set true if registration succeeded in the SIP world.
@@ -340,14 +331,10 @@ bool Control::registerIMSI(Control::AuthenticationParameters& authParams, GSM::L
 	}
 }
 
-bool Control::authenticate(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH)
-{
-    bool success = false;
-    // Did we get a RAND for challenge-response?
-    if (authParams.isRANDset()) {
-	// Request the mobile's SRES.
-	LCH->send(L3AuthenticationRequest(authParams.CKSN(), authParams.RAND()));
-	LOG(DEBUG) << "SEND L3AuthenticationResponse " << L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
+inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+    if (authParams.isRANDset()) { // Did we get a RAND for challenge-response?
+	LCH->send(L3AuthenticationRequest(authParams.CKSN(), authParams.RAND())); // Request the mobile's SRES.
+	LOG(DEBUG) << "SENT  L3AuthenticationRequest " << L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
 	L3Message* msg = getMessage(LCH);
 	L3AuthenticationResponse* resp = dynamic_cast<L3AuthenticationResponse*>(msg);
 	if (!resp) {
@@ -355,45 +342,77 @@ bool Control::authenticate(AuthenticationParameters& authParams, GSM::LogicalCha
 		LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
 		delete msg;
 	    }
+	    throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
+	}
+	return resp->SRES().value();
+	LOG(DEBUG) << "Recieved L3AuthenticationResponse " << *resp;
+    } else LOG(ERR) << "RAND is not set!";
+    return 0;
+}
+
+inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+    if (authParams.isKCset() && gConfig.getNum("GSM.Encryption")) {
+	LCH->setKc(authParams.get_Kc());
+	LOG(DEBUG) << "Ciphering key set for LCH , KC = " << authParams.get_Kc();
+	LCH->send(GSM::L3CipheringModeCommand(authParams.get_a5()));
+	LCH->activateDecryption(authParams.get_a5());
+	LOG(DEBUG) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type();
+	L3Message* mc_msg = getMessage(LCH);
+	L3CipheringModeComplete* mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
+	if(!mode_compl) {
+	    if (mc_msg) {
+		LOG(DEBUG) << "Waiting for L3CipheringModeComplete, got Unexpected message " << *mc_msg;
+		delete mc_msg;
+	    }
 	    // FIXME -- We should differentiate between wrong message and no message at all.
 	    throw UnexpectedMessage();
-	}
-	authParams.set_SRES((resp->SRES()).value());
-	LOG(DEBUG) << "Recieved L3AuthenticationResponse " << *resp;
-	delete msg;
-
-	// verify SRES
-	if (registerIMSI(authParams, LCH)) {
-	    LOG(DEBUG) << "Authentication success for" << authParams.mobileID();
-	    success = true;
-	    if (authParams.isKCset() && gConfig.getNum("GSM.Encryption")) {
-		LCH->setKc(authParams.get_Kc());
-		LOG(DEBUG) << "Ciphering key set for LCH , KC = " << authParams.get_Kc();
-		LCH->send(GSM::L3CipheringModeCommand(authParams.get_a5()));
-		LCH->activateDecryption(authParams.get_a5());
-		LOG(DEBUG) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type();
-		L3Message* mc_msg = getMessage(LCH);
-		L3CipheringModeComplete* mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
-		if(!mode_compl) {
-		    if (mc_msg) {
-			LOG(DEBUG) << "Waiting for L3CipheringModeComplete, got Unexpected message " << *msg;
-			delete mc_msg;
-		    }
-		    // FIXME -- We should differentiate between wrong message and no message at all.
-		    throw UnexpectedMessage();
-		} else {
-		    LOG(DEBUG) << *mode_compl << "Responce received, activating encryption.";
-		    LCH->activateEncryption(authParams.get_a5());
-		    delete mc_msg;
-		}
-	    }
 	} else {
-	    LOG(DEBUG) << "Failed to verify SRES";
+	    LOG(DEBUG) << *mode_compl << "Responce received, activating encryption.";
+	    LCH->activateEncryption(authParams.get_a5());
+	    delete mc_msg;
 	}
+    }
+}
+
+bool Control::auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+    bool success = false;
+    authParams.set_SRES(auth_re(authParams, LCH));
+
+    if (registerIMSI(authParams, LCH)) { // verify SRES
+	LOG(DEBUG) << "SIP authentication success for" << authParams.mobileID();
+	success = true;
+	cipher(authParams, LCH);
     } else {
-	LOG(DEBUG) << "Failed to obtain RAND";
+	LOG(DEBUG) << "Failed to verify SRES";
     }
     return success;
 }
 
-// vim: ts=4 sw=4
+bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+    authParams.set_RAND(gSubscriberRegistry.imsiGet(authParams.get_mobileID(), "rand"));
+    authParams.set_SRES(auth_re(authParams, LCH));
+
+    string RES = gSubscriberRegistry.imsiGet(authParams.get_mobileID(), "sres");
+    if (RES == authParams.get_SRES()) { // verify SRES
+	LOG(DEBUG) << "Local authentication success for" << authParams.mobileID();
+	cipher(authParams, LCH);
+	return true;
+    }
+    LOG(ERR) << "Failed to verify SRES " << authParams.get_SRES() << " against local RES " << RES;
+    return false;
+}
+
+bool Control::auth_reg(GSM::L3MobileIdentity mobileID, GSM::LogicalChannel* LCH) {
+    AuthenticationParameters authParams(mobileID);
+    bool r, a;
+    LOG(DEBUG) << "Registering " << mobileID << endl;
+    switch(gConfig.getNum("GSM.Authentication")) {
+    case 0: return registerIMSI(authParams, LCH);
+    case 1:
+	r = registerIMSI(authParams, LCH);
+	a = auth_sip(authParams, LCH);
+	return (r && a);
+    case 2: return auth_local(authParams, LCH);
+    default: return false;
+    }
+}

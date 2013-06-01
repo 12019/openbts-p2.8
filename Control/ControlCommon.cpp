@@ -164,6 +164,15 @@ void AuthenticationParameters::set_RAND(string RAND)
     mRANDset = true;
 }
 
+const char * AuthenticationParameters::get_mobileID() const
+{
+    ostringstream os;
+    os.width(8);
+    os.fill('0');
+    os << hex << mMobileID.digits();
+    return os.str().c_str();
+}
+
 const char * AuthenticationParameters::get_SRES() const
 {
     ostringstream os;

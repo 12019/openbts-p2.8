@@ -781,13 +781,8 @@ void Control::MOCStarter(const GSM::L3CMServiceRequest* req, GSM::LogicalChannel
 	// For now, we are assuming that the phone won't make a call if it didn't
 	// get registered.
 
-	if (gConfig.getNum("GSM.Authentication") || gConfig.getNum("GSM.Encryption")) {
-	    LOG(DEBUG) << "Trying to athenticate caller: " << mobileID << endl;
-	    AuthenticationParameters authParams(mobileID);
-	    registerIMSI(authParams, LCH);
-	    bool auth_result = authenticate(authParams, LCH);
-	    LOG(DEBUG) << "Authentication routine returned: " << auth_result << endl;
-	}
+	bool auth_result = auth_reg(mobileID, LCH);
+
 	// Allocate a TCH for the call, if we don't have it already.
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	if (!veryEarly) {
@@ -1085,13 +1080,7 @@ void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 	unsigned L3TI = transaction->L3TI();
 	assert(L3TI<7);
 
-	if (gConfig.getNum("GSM.Authentication") || gConfig.getNum("GSM.Encryption")) {
-	    LOG(DEBUG) << "Trying to athenticate caller: " << mobID << endl;
-	    AuthenticationParameters authParams(mobID);
-	    registerIMSI(authParams, LCH);
-	    bool auth_result = authenticate(authParams, LCH);
-	    LOG(DEBUG) << "Authentication routine returned: " << auth_result << endl;
-	}
+	bool auth_result = auth_reg(mobID, LCH);
 
 	// GSM 04.08 5.2.2.1
 	LOG(DEBUG) << "sending GSM Setup to call " << transaction->calling();

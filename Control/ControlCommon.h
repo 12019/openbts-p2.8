@@ -106,6 +106,7 @@ class AuthenticationParameters {
 	const char * get_Kc() const { return mKC.c_str(); }
 	void set_Kc(string key) { mKC = key; mKCset = true; }
 	const char * get_SRES() const;
+	const char * get_mobileID() const;
 
 	const GSM::L3RAND& RAND() const { return mRAND; }
 	const GSM::L3CipheringKeySequenceNumber& CKSN() const { return mCKSN; }

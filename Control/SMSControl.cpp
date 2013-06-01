@@ -204,13 +204,7 @@ void Control::MOSMSController(const GSM::L3CMServiceRequest *req, GSM::LogicalCh
 	// the clearing procedure is invoked.
 	// """
 
-	// FIXME: check provisioning
-
-	if (gConfig.getNum("GSM.Authentication") || gConfig.getNum("GSM.Encryption")) {
-		AuthenticationParameters authParams(mobileID);
-		registerIMSI(authParams, LCH);
-		authenticate(authParams, LCH);
-	}
+	auth_reg(mobileID, LCH);
 
 	// Let the phone know we're going ahead with the transaction.
 	if ((LCH->getCiphering() != GSM::Decrypting) && (LCH->getCiphering() != GSM::EncryptingAndDecrypting)) {
@@ -486,11 +480,7 @@ void Control::MTSMSController(TransactionEntry *transaction, GSM::LogicalChannel
 		}
 	}
 
-	if (gConfig.getNum("GSM.Authentication") || gConfig.getNum("GSM.Encryption")) {
-		AuthenticationParameters authParams(transaction->subscriber());
-		registerIMSI(authParams, LCH);
-		authenticate(authParams, LCH);
-	}
+	auth_reg(transaction->subscriber(), LCH);
 
 	bool success = deliverSMSToMS(transaction->calling().digits(),transaction->message(),
 								transaction->messageType(),transaction->L3TI(),LCH);

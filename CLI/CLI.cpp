@@ -324,11 +324,10 @@ int sendsimple(int argc, char** argv, ostream& os)
 		"Content-Type: text/plain\nContent-Length: %zu\n"
 		"\n%s\n";
 	static char buffer[1500];
-	snprintf(buffer,1499,form,
-		IMSI, (unsigned)random(), srcAddr,srcAddr,sock.port(), (unsigned)random(), IMSI, (unsigned)random(), sock.port(), strlen(txtBuf), txtBuf);
-	sock.write(buffer);
+	snprintf(buffer, 1499, form, IMSI, (unsigned)random(), srcAddr,srcAddr,sock.port(), (unsigned)random(), IMSI, (unsigned)random(), sock.port(), strlen(txtBuf), txtBuf);
+	int r = sock.write(buffer);
 
-	os << "message submitted for delivery" << endl;
+	os << "message submitted for delivery: " << r << endl;
 
 #if 0
 	int numRead = sock.read(buffer,10000);
@@ -391,11 +390,11 @@ int sendrrlp(int argc, char** argv, ostream& os)
 	snprintf(txtBuf,160,"RRLP%s",argv[2]);
 	char outbuf[1500];
 	snprintf(outbuf,1499,form,IMSI,port,IMSI,callID,strlen(txtBuf),txtBuf);
-	sock.write(outbuf);
+	int r1 = sock.write(outbuf);
 	sleep(2);
-	sock.write(outbuf);
+	int r2 = sock.write(outbuf);
 	sock.close();
-	os << "RRLP Triggering message submitted for delivery" << endl;
+	os << "RRLP Triggering message submitted for delivery: " << r1 << ", " << r2 << endl;
 
 	return SUCCESS;
 }
@@ -810,7 +809,7 @@ int testauth(int argc, char** argv, ostream& os)
 	authParams.set_SRES(sres);
     }
     GSM::AuthTestLogicalChannel * LCH = new GSM::AuthTestLogicalChannel(authParams);
-    os << "authentication result for " << IMSI << ": " << Control::authenticate(authParams, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
+    os << "authentication result for " << IMSI << ": " << Control::auth_sip(authParams, dynamic_cast<GSM::LogicalChannel*>(LCH)) << endl;
     return SUCCESS;
 }
 
