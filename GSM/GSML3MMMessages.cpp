@@ -331,9 +331,8 @@ void L3IdentityResponse::text(ostream& os) const
 
 void L3AuthenticationRequest::writeBody(L3Frame& dest, size_t &wp) const
 {
-	dest.writeField(wp,0,4);		// spare half octet
+	dest.writeField(wp,0,4);	    // spare half octet
 	mCipheringKeySequenceNumber.writeV(dest,wp);
-
 	mRAND.writeV(dest,wp);
 }
 

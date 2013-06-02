@@ -368,21 +368,6 @@ class L3MMInformation : public L3MMMessage {
 	void text(std::ostream&) const;
 };
 
-class L3AUTN : public L3MMMessage {
-// AUTN message from UMTS, 64 bits, used in heterogeneous deployments
-private:
-
-    uint64_t autn;
-
-public:
-
-    L3AUTN(uint64_t data):L3MMMessage(), autn(data) {}
-    size_t l2BodyLength() const { return 8; }
-    void writeBody(L3Frame& dest, size_t& wp) const { dest.writeField(wp, autn, 64); }
-    void text(std::ostream& os) const { L3MMMessage::text(os); os << "AUTN: " << autn; }
-};
-
-
 /** Identity Request, GSM 04.08 9.2.10 */
 class L3IdentityRequest : public L3MMMessage {
 
@@ -426,27 +411,24 @@ class L3IdentityResponse : public L3MMMessage {
 
 /** GSM 04.08 9.2.2 */
 class L3AuthenticationRequest : public L3MMMessage {
+private:
+    L3CipheringKeySequenceNumber mCipheringKeySequenceNumber;
+    L3RAND mRAND;
+    L3AUTN mAUTN;
+    bool autn_present;
 
-	private:
+public:
 
-	L3CipheringKeySequenceNumber mCipheringKeySequenceNumber;
-	L3RAND mRAND;
+    L3AuthenticationRequest(const L3CipheringKeySequenceNumber &wCipheringKeySequenceNumber, const L3RAND &wRAND): mCipheringKeySequenceNumber(wCipheringKeySequenceNumber), mRAND(wRAND) { autn_present = false; }
 
-	public:
+    L3AuthenticationRequest(const L3CipheringKeySequenceNumber &wCipheringKeySequenceNumber, const L3RAND &wRAND, const L3AUTN &wAUTN): mCipheringKeySequenceNumber(wCipheringKeySequenceNumber), mRAND(wRAND), mAUTN(wAUTN) { autn_present = true; }
+    int MTI() const { return AuthenticationRequest; }
 
-	L3AuthenticationRequest(
-		const L3CipheringKeySequenceNumber &wCipheringKeySequenceNumber,
-		const L3RAND &wRAND
-	):
-		mCipheringKeySequenceNumber(wCipheringKeySequenceNumber),
-		mRAND(wRAND)
-	{ }
-
-	int MTI() const { return AuthenticationRequest; }
-
-	size_t l2BodyLength() const { return 1 + mRAND.lengthV(); }
-	void writeBody(L3Frame&, size_t &wp) const;
-	void text(std::ostream&) const;
+    size_t l2BodyLength() const {
+	if (autn_present) { return 1 + mRAND.lengthV() + mAUTN.lengthV(); } else { return 1 + mRAND.lengthV(); }
+    }
+    void writeBody(L3Frame&, size_t &wp) const;
+    void text(std::ostream&) const;
 };
 
 /** GSM 04.08 9.2.3 */

@@ -29,7 +29,10 @@
 
 #ifndef GSML3MMELEMENTS_H
 #define GSML3MMELEMENTS_H
-
+extern "C" {
+#include <osmocom/core/utils.h>
+#include <osmocom/gsm/a5.h>
+}
 #include "GSML3Message.h"
 #include <Globals.h>
 
@@ -185,6 +188,21 @@ public:
 	void text(std::ostream&) const;
 };
 
+/** ETSI TS 124.008 10.5.3.1.1 */
+class L3AUTN : public L3ProtocolElement { // we do not care about internal structure of AUTN
+private: // because it's external (UMTS) element
+    uint8_t autn_tlv[18]; // raw bytes
+
+public:
+    L3AUTN() {}
+    L3AUTN(uint8_t * bytes) { memcpy(autn_tlv, bytes, 18); }
+
+    size_t lengthV() const { return 18; }
+    void writeV(L3Frame &dest, size_t &wp) const { for (int i = 0; i < 18; i++) dest.writeField(wp, autn_tlv[i], 8); }
+    void parseV(const L3Frame&, size_t&) { assert(0); }
+    void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
+    void text(std::ostream &os) const { os << "AUTN: " << osmo_hexdump_nospc(autn_tlv, 144); }
+};
 
 /** GSM 04.08 10.5.3.1 */
 class L3RAND : public L3ProtocolElement {
