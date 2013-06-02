@@ -316,44 +316,38 @@ void L3IdentityRequest::text(ostream& os) const
 
 
 
-void L3IdentityResponse::parseBody(const L3Frame& src, size_t& rp)
-{
-	mMobileID.parseLV(src,rp);
-}
+void L3IdentityResponse::parseBody(const L3Frame& src, size_t& rp) { mMobileID.parseLV(src,rp); }
 
 void L3IdentityResponse::text(ostream& os) const
 {
-	L3MMMessage::text(os);
-	os << "mobile id=" << mMobileID;
+    L3MMMessage::text(os);
+    os << "mobile id=" << mMobileID;
 }
 
 
 
-void L3AuthenticationRequest::writeBody(L3Frame& dest, size_t &wp) const
-{
-	dest.writeField(wp,0,4);	    // spare half octet
-	mCipheringKeySequenceNumber.writeV(dest,wp);
-	mRAND.writeV(dest,wp);
+void L3AuthenticationRequest::writeBody(L3Frame& dest, size_t &wp) const {
+    dest.writeField(wp, 0, 4); // spare half octet
+    mCipheringKeySequenceNumber.writeV(dest, wp);
+    mRAND.writeV(dest, wp);
+    if (autn_present) mAUTN.writeV(dest, wp);
 }
 
-void L3AuthenticationRequest::text(ostream& os) const
-{
-	L3MMMessage::text(os);
-	os << "CKSN=" << mCipheringKeySequenceNumber;
-	os << " RAND=" << mRAND;
+void L3AuthenticationRequest::text(ostream& os) const {
+    L3MMMessage::text(os);
+    os << "CKSN=" << mCipheringKeySequenceNumber;
+    os << " RAND=" << mRAND;
+    if (autn_present) os << " " << mAUTN;
 }
 
 
 
-void L3AuthenticationResponse::parseBody(const L3Frame& src, size_t& rp)
-{
-	mSRES.parseV(src,rp);
-}
+void L3AuthenticationResponse::parseBody(const L3Frame& src, size_t& rp) { mSRES.parseV(src,rp); }
 
 void L3AuthenticationResponse::text(ostream& os) const
 {
-	L3MMMessage::text(os);
-	os << "SRES=" << mSRES;
+    L3MMMessage::text(os);
+    os << "SRES=" << mSRES;
 }
 
 

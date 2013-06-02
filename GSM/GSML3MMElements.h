@@ -198,10 +198,10 @@ public:
     L3AUTN(uint8_t * bytes) { memcpy(autn_tlv, bytes, 18); }
 
     size_t lengthV() const { return 18; }
-    void writeV(L3Frame &dest, size_t &wp) const { for (int i = 0; i < 18; i++) dest.writeField(wp, autn_tlv[i], 8); }
+    void writeV(L3Frame &dest, size_t &wp) const;
     void parseV(const L3Frame&, size_t&) { assert(0); }
     void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
-    void text(std::ostream &os) const { os << "AUTN: " << osmo_hexdump_nospc(autn_tlv, 144); }
+    void text(std::ostream &os) const { os << "AUTN: " << osmo_hexdump_nospc(autn_tlv, 18); }
 };
 
 /** GSM 04.08 10.5.3.1 */

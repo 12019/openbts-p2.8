@@ -65,6 +65,8 @@ class TransactionTable;
 
 enum a3a8 { MILENAGE, COMP128v1, UMTS };
 
+char * print_a3a8(enum a3a8 a);
+
 class AuthenticationParameters {
 
 	private:

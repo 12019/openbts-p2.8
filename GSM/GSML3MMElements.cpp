@@ -228,12 +228,13 @@ void L3TimeZoneAndTime::text(ostream& os) const
 	os << timeStr << " (local)";
 }
 
+void L3AUTN::writeV(L3Frame &dest, size_t &wp) const {
+    for (int i = 0; i < 18; i++) dest.writeField(wp, autn_tlv[i], 8);
+}
 
-
-void L3RAND::writeV(L3Frame& dest, size_t &wp) const
-{
-	dest.writeField(wp,mRUpper,64);
-	dest.writeField(wp,mRLower,64);
+void L3RAND::writeV(L3Frame& dest, size_t &wp) const {
+    dest.writeField(wp,mRUpper,64);
+    dest.writeField(wp,mRLower,64);
 }
 
 void L3RAND::text(ostream& os) const
@@ -249,10 +250,7 @@ void L3RAND::text(ostream& os) const
     os << os_x.str();
 }
 
-void L3SRES::parseV(const L3Frame& src, size_t &rp)
-{
-	mValue = src.readField(rp,32);
-}
+void L3SRES::parseV(const L3Frame& src, size_t &rp) { mValue = src.readField(rp,32); }
 
 void L3SRES::text(ostream& os) const
 {

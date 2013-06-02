@@ -130,7 +130,10 @@ void gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN,
 	ofs += (frame.size() + 7) >> 3;
 
 	// Write the GSMTAP packet
-	GSMTAPSocket.write(buffer, ofs);
+	int r = GSMTAPSocket.write(buffer, ofs);
+	if (r < 0) {
+	    LOG(ERR) << "GSMTAP failed to send to " << gConfig.getStr("Control.GSMTAP.TargetIP");
+	}
 }
 
 

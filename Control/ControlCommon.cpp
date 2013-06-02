@@ -170,6 +170,8 @@ void AuthenticationParameters::set_AUTN(string AUTN)
     if (osmo_hexparse(AUTN.c_str(), autn, 18) == 18) {
 	mAUTN = L3AUTN(autn);
 	mAUTNset = true;
+    } else {
+	LOG(ERR) << "Failed to parse AUTN " << AUTN << " length: " << osmo_hexparse(AUTN.c_str(), autn, 18);
     }
 }
 
@@ -243,8 +245,11 @@ void  Control::resolveIMSI(L3MobileIdentity& mobileIdentity, LogicalChannel* LCH
 	}
 }
 
-
-
-
-
-// vim: ts=4 sw=4
+char * Control::print_a3a8(enum a3a8 a) {
+    switch (a) {
+    case MILENAGE: return "MILENAGE";
+    case COMP128v1: return "COMP128v1";
+    case UMTS: return "UMTS";
+    default: return "UNKNOWN--FIXME";
+    }
+}

@@ -94,16 +94,17 @@ void Control::IMSIDetachController(const L3IMSIDetachIndication* idi, LogicalCha
 	LOG(INFO) << *idi;
 
 	// The IMSI detach maps to a SIP unregister with the local Asterisk server.
-	try { 
-		// FIXME -- Resolve TMSIs to IMSIs.
+	if (gConfig.getNum("GSM.Authentication") < 2) { // check if SIP register/auth were used at all
+	    try { // FIXME -- Resolve TMSIs to IMSIs.
 		if (idi->mobileID().type()==IMSIType) {
-			SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(), idi->mobileID().digits());
-			AuthenticationParameters authParams(idi->mobileID());
-			engine.unregister(authParams);
+		    SIPEngine engine(gConfig.getStr("SIP.Proxy.Registration").c_str(), idi->mobileID().digits());
+		    AuthenticationParameters authParams(idi->mobileID());
+		    engine.unregister(authParams);
 		}
-	}
-	catch(SIPTimeout) {
+	    }
+	    catch(SIPTimeout) {
 		LOG(ALERT) "SIP registration timed out.  Is Asterisk running?";
+	    }
 	}
 	// No reponse required, so just close the channel.
 	DCCH->send(L3ChannelRelease());
@@ -331,27 +332,6 @@ bool registerIMSI(Control::AuthenticationParameters& authParams, GSM::LogicalCha
 	}
 }
 
-inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) { // authentication request-responce
-    if (authParams.isRANDset()) { // Did we get a RAND for challenge-response?
-	L3AuthenticationRequest req = (UMTS == authParams.get_alg()) ? L3AuthenticationRequest(authParams.CKSN(), authParams.RAND(), authParams.AUTN()) : L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
-
-	LCH->send(req); // Request the mobile's SRES.
-	LOG(DEBUG) << "SENT  L3AuthenticationRequest " << req;
-	L3Message* msg = getMessage(LCH);
-	L3AuthenticationResponse* resp = dynamic_cast<L3AuthenticationResponse*>(msg);
-	if (!resp) {
-	    if (msg) {
-		LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
-		delete msg;
-	    }
-	    throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
-	}
-	return resp->SRES().value();
-	LOG(DEBUG) << "Recieved L3AuthenticationResponse " << *resp;
-    } else LOG(ERR) << "RAND is not set!";
-    return 0;
-}
-
 inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) { // cipher mode commands
     if (authParams.isKCset() && gConfig.getNum("GSM.Encryption")) {
 	LCH->setKc(authParams.get_Kc());
@@ -374,6 +354,31 @@ inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LC
 	    delete mc_msg;
 	}
     }
+}
+
+inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) { // authentication request-responce
+    if (authParams.isRANDset()) { // Did we get a RAND for challenge-response?
+	L3AuthenticationRequest req = (UMTS == authParams.get_alg()) ? L3AuthenticationRequest(authParams.CKSN(), authParams.RAND(), authParams.AUTN()) : L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
+	if (UMTS == authParams.get_alg()) {
+	    LOG(DEBUG) << "AUTN: " << authParams.AUTN() << " is set: " << authParams.isAUTNset();
+	} else {
+	    LOG(DEBUG) << "ALG: " << Control::print_a3a8(authParams.get_alg());
+	}
+	LCH->send(req); // Request the mobile's SRES.
+	LOG(DEBUG) << "SENT L3AuthenticationRequest " << req;
+	L3Message* msg = getMessage(LCH);
+	L3AuthenticationResponse* resp = dynamic_cast<L3AuthenticationResponse*>(msg);
+	if (!resp) {
+	    if (msg) {
+		LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
+		delete msg;
+	    }
+	    throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
+	}
+	return resp->SRES().value();
+	LOG(DEBUG) << "Recieved L3AuthenticationResponse " << *resp;
+    } else LOG(ERR) << "RAND is not set!";
+    return 0;
 }
 
 bool Control::auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
@@ -400,7 +405,7 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
 	authParams.set_alg(UMTS);
 	string AUTN = gSubscriberRegistry.imsiGet(IMSI, "opc");
 	authParams.set_AUTN(AUTN);
-	LOG(DEBUG) << "Loaded " << AUTN.length() << " bytes AUTN: " << AUTN;
+	LOG(DEBUG) << "Loaded " << AUTN.length() << " bytes AUTN: " << AUTN << " set " << authParams.isAUTNset();
     }
     authParams.set_RAND(RAND);
     authParams.set_SRES(auth_re(authParams, LCH));
