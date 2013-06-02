@@ -63,7 +63,7 @@ namespace Control {
 class TransactionEntry;
 class TransactionTable;
 
-enum a3a8 { MILENAGE, COMP128v1 };
+enum a3a8 { MILENAGE, COMP128v1, UMTS };
 
 class AuthenticationParameters {
 
@@ -71,9 +71,11 @@ class AuthenticationParameters {
 	GSM::L3MobileIdentity mMobileID;
 	GSM::L3SRES mSRES;
 	GSM::L3RAND mRAND;
+	GSM::L3AUTN mAUTN;
 	GSM::L3CipheringKeySequenceNumber mCKSN;
 	string mKC;
 	bool mRANDset;
+	bool mAUTNset;
 	bool mKCset;
 	bool mSRESset;
 	enum a3a8 mAlg;
@@ -85,11 +87,13 @@ class AuthenticationParameters {
 	    :mMobileID(wMobileID),
 	    mSRES(0),
 	    mRAND(0,0),
+	    mAUTN(),
 	    mCKSN(0),
 	    mKC(""),
 	    mRANDset(false),
 	    mKCset(false),
 	    mSRESset(false),
+	    mAUTNset(false),
 	    mAlg(COMP128v1),
 	    a5(0)
 	{}
@@ -103,6 +107,7 @@ class AuthenticationParameters {
 
 	const char * get_RAND() const;
 	void set_RAND(string RAND);
+	void set_AUTN(string AUTN);
 	const char * get_Kc() const { return mKC.c_str(); }
 	void set_Kc(string key) { mKC = key; mKCset = true; }
 	const char * get_SRES() const;
@@ -112,8 +117,10 @@ class AuthenticationParameters {
 	const GSM::L3CipheringKeySequenceNumber& CKSN() const { return mCKSN; }
 	const GSM::L3MobileIdentity& mobileID() const { return mMobileID; }
 	const GSM::L3SRES SRES() const { return mSRES; }
+	const GSM::L3AUTN AUTN() const { return mAUTN; }
 
 	bool isRANDset() { return mRANDset; }
+	bool isAUTNset() { return mAUTNset; }
 	bool isSRESset() { return mSRESset; }
 	bool isKCset() { return mKCset; }
 };

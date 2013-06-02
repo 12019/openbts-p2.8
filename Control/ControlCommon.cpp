@@ -164,6 +164,15 @@ void AuthenticationParameters::set_RAND(string RAND)
     mRANDset = true;
 }
 
+void AuthenticationParameters::set_AUTN(string AUTN)
+{
+    uint8_t autn[18];
+    if (osmo_hexparse(AUTN.c_str(), autn, 18) == 18) {
+	mAUTN = L3AUTN(autn);
+	mAUTNset = true;
+    }
+}
+
 const char * AuthenticationParameters::get_mobileID() const
 {
     ostringstream os;

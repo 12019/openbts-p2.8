@@ -331,10 +331,12 @@ bool registerIMSI(Control::AuthenticationParameters& authParams, GSM::LogicalCha
 	}
 }
 
-inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) { // authentication request-responce
     if (authParams.isRANDset()) { // Did we get a RAND for challenge-response?
-	LCH->send(L3AuthenticationRequest(authParams.CKSN(), authParams.RAND())); // Request the mobile's SRES.
-	LOG(DEBUG) << "SENT  L3AuthenticationRequest " << L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
+	L3AuthenticationRequest req = (UMTS == authParams.get_alg()) ? L3AuthenticationRequest(authParams.CKSN(), authParams.RAND(), authParams.AUTN()) : L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
+
+	LCH->send(req); // Request the mobile's SRES.
+	LOG(DEBUG) << "SENT  L3AuthenticationRequest " << req;
 	L3Message* msg = getMessage(LCH);
 	L3AuthenticationResponse* resp = dynamic_cast<L3AuthenticationResponse*>(msg);
 	if (!resp) {
@@ -350,7 +352,7 @@ inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChanne
     return 0;
 }
 
-inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
+inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) { // cipher mode commands
     if (authParams.isKCset() && gConfig.getNum("GSM.Encryption")) {
 	LCH->setKc(authParams.get_Kc());
 	LOG(DEBUG) << "Ciphering key set for LCH , KC = " << authParams.get_Kc();
@@ -389,10 +391,16 @@ bool Control::auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel
 }
 
 bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) {
-    string IMSI = string("IMSI") + string(authParams.get_mobileID()), RAND = gSubscriberRegistry.imsiGet(IMSI, "rand");
+    string IMSI = string("IMSI") + string(authParams.get_mobileID()), RAND = gSubscriberRegistry.imsiGet(IMSI, "rand"), a3a8 = gSubscriberRegistry.imsiGet(IMSI, "a3_a8");
     if (0 == RAND.length()) {
 	LOG(DEBUG) << "Failed to obtain RAND for " << authParams.mobileID();
 	return false;
+    }
+    if (a3a8 == "UMTS") {
+	authParams.set_alg(UMTS);
+	string AUTN = gSubscriberRegistry.imsiGet(IMSI, "opc");
+	authParams.set_AUTN(AUTN);
+	LOG(DEBUG) << "Loaded " << AUTN.length() << " bytes AUTN: " << AUTN;
     }
     authParams.set_RAND(RAND);
     authParams.set_SRES(auth_re(authParams, LCH));
