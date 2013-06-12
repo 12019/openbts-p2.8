@@ -338,7 +338,7 @@ inline void cipher(AuthenticationParameters& authParams, GSM::LogicalChannel* LC
 	LOG(DEBUG) << "Ciphering key set for LCH , KC = " << authParams.get_Kc();
 	LCH->send(GSM::L3CipheringModeCommand(authParams.get_a5()));
 	LCH->activateDecryption(authParams.get_a5());
-	LOG(DEBUG) << "Decryption activated: Ciphering Mode Command sent over " << LCH->type();
+	LOG(DEBUG) << "Decryption activated: " << authParams.get_a5() << "Ciphering Mode Command sent over " << LCH->type();
 	L3Message* mc_msg = getMessage(LCH);
 	L3CipheringModeComplete* mode_compl = dynamic_cast<L3CipheringModeComplete*>(mc_msg);
 	if(!mode_compl) {
@@ -401,7 +401,8 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
 	LOG(DEBUG) << "Failed to obtain RAND for " << authParams.mobileID();
 	return false;
     }
-    if (a3a8 == "UMTS") {
+
+    if (a3a8 == "UMTS") { // add AUTN if we act as radio frontend for UMTS core
 	authParams.set_alg(UMTS);
 	string AUTN = gSubscriberRegistry.imsiGet(IMSI, "opc");
 	authParams.set_AUTN(AUTN);
@@ -410,14 +411,21 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
     authParams.set_RAND(RAND);
     authParams.set_SRES(auth_re(authParams, LCH));
 
-    string RES = gSubscriberRegistry.imsiGet(IMSI, "sres");
-    if (RES == authParams.get_SRES()) { // verify SRES
-	LOG(DEBUG) << "Local authentication success for " << authParams.mobileID();
+    if (a3a8 == "UMTS") { // MITM - no need to actually check SRES, just pretend it's OK
+	LOG(DEBUG) << "MITM: SRES check bypassed";
 	cipher(authParams, LCH);
+	LOG(DEBUG) << "MITM: " << authParams.get_a5() << " cipher forced";
 	return true;
+    } else {
+	string RES = gSubscriberRegistry.imsiGet(IMSI, "sres");
+	if (RES == authParams.get_SRES()) { // verify SRES
+	    LOG(DEBUG) << "Local authentication success for " << authParams.mobileID();
+	    cipher(authParams, LCH);
+	    return true;
+	}
+	LOG(ERR) << "Failed to verify SRES " << authParams.get_SRES() << " against local RES " << RES;
+	return false;
     }
-    LOG(ERR) << "Failed to verify SRES " << authParams.get_SRES() << " against local RES " << RES;
-    return false;
 }
 
 bool Control::auth_reg(GSM::L3MobileIdentity mobileID, GSM::LogicalChannel* LCH) {

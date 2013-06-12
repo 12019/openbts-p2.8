@@ -166,12 +166,13 @@ void AuthenticationParameters::set_RAND(string RAND)
 
 void AuthenticationParameters::set_AUTN(string AUTN)
 {
-    uint8_t autn[18];
-    if (osmo_hexparse(AUTN.c_str(), autn, 18) == 18) {
-	mAUTN = L3AUTN(autn);
-	mAUTNset = true;
-    } else {
-	LOG(ERR) << "Failed to parse AUTN " << AUTN << " length: " << osmo_hexparse(AUTN.c_str(), autn, 18);
+    uint8_t autn[18], preautn[18];
+    preautn[0] = 0x20, preautn[1] = 16; // manually set length and type
+    int len = osmo_hexparse(AUTN.c_str(), autn, 18);
+    switch (len) {
+    case 18: mAUTN = L3AUTN(autn); mAUTNset = true; // complete TLV
+    case 16: memcpy(preautn, autn, 16); mAUTN = L3AUTN(autn); mAUTNset = true; // Value only
+    default: LOG(ERR) << "Failed to parse AUTN " << AUTN << " length: " << len;
     }
 }
 
