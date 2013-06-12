@@ -412,9 +412,9 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
     authParams.set_SRES(auth_re(authParams, LCH));
 
     if (a3a8 == "UMTS") { // MITM - no need to actually check SRES, just pretend it's OK
-	LOG(DEBUG) << "MITM: SRES check bypassed";
+	LOG(DEBUG) << "MITM: SRES check bypassed for " << authParams.get_SRES();
 	cipher(authParams, LCH);
-	LOG(DEBUG) << "MITM: " << authParams.get_a5() << " cipher forced";
+	LOG(DEBUG) << "MITM: a5/" << authParams.get_a5() << " cipher forced";
 	return true;
     } else {
 	string RES = gSubscriberRegistry.imsiGet(IMSI, "sres");

@@ -754,7 +754,12 @@ int callID(int argc, char** argv, ostream& os)
 	os << IMSI << " is not a valid IMSI" << endl;
 	return BAD_VALUE;
     }
-    os << "IMSI "<< IMSI << " caller-id number " << gSubscriberRegistry.getCLIDLocal(IMSI) << endl;
+    string cid = gSubscriberRegistry.getCLIDLocal(IMSI);
+    if (cid.length()) {
+	os << "IMSI "<< IMSI << " caller-id number " << gSubscriberRegistry.getCLIDLocal(IMSI) << endl;
+    } else {
+	os << "IMSI "<< IMSI << " has no extension assigned" << endl;
+    }
     return SUCCESS;
 }
 

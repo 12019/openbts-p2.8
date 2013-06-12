@@ -93,9 +93,9 @@ class AuthenticationParameters {
 	    mCKSN(0),
 	    mKC(""),
 	    mRANDset(false),
+	    mAUTNset(false),
 	    mKCset(false),
 	    mSRESset(false),
-	    mAUTNset(false),
 	    mAlg(COMP128v1),
 	    a5(0)
 	{}
