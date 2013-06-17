@@ -58,6 +58,7 @@ static void ctrlCHandler(int signo)
 int main(int argc, char *argv[])
 {
   std::string deviceArgs;
+  std::string txAntenna, rxAntenna;
 
   if (argc == 3)
   {
@@ -89,15 +90,29 @@ int main(int argc, char *argv[])
   srandom(time(NULL));
 
   int mOversamplingRate = numARFCN/2 + numARFCN;
-  RadioDevice *usrp = RadioDevice::make(DEVICERATE);
+  RadioDevice *usrp = RadioDevice::make(DEVICERATE * SAMPSPERSYM);
   if (!usrp->open(deviceArgs)) {
     LOG(ALERT) << "Transceiver exiting..." << std::endl;
     return EXIT_FAILURE;
   }
 
+  if (gConfig.defines("GSM.Radio.TxAntenna"))
+    txAntenna = gConfig.getStr("GSM.Radio.TxAntenna").c_str();
+  if (gConfig.defines("GSM.Radio.RxAntenna"))
+    rxAntenna = gConfig.getStr("GSM.Radio.RxAntenna").c_str();
+
+  if (txAntenna != "")  
+    usrp->setTxAntenna(txAntenna);
+  if (rxAntenna != "")  
+    usrp->setRxAntenna(rxAntenna);
+
+  LOG(INFO) << "transceiver using transmit antenna " << usrp->getRxAntenna();
+  LOG(INFO) << "transceiver using receive antenna " << usrp->getTxAntenna();
+
   RadioInterface* radio = new RadioInterface(usrp,3,SAMPSPERSYM,mOversamplingRate,false);
-  Transceiver *trx = new Transceiver(5700,"127.0.0.1",SAMPSPERSYM,GSM::Time(3,0),radio);
+  Transceiver *trx = new Transceiver(gConfig.getNum("TRX.Port"),gConfig.getStr("TRX.IP").c_str(),SAMPSPERSYM,GSM::Time(3,0),radio);
   trx->receiveFIFO(radio->receiveFIFO());
+
 /*
   signalVector *gsmPulse = generateGSMPulse(2,1);
   BitVector normalBurstSeg = "0000101010100111110010101010010110101110011000111001101010000";

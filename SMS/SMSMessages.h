@@ -75,7 +75,6 @@ std::ostream& operator<<(std::ostream& os, const TLElement& msg);
 /**
 	GSM 03.40 9.1.2.5
 	This is very similar to a Q.931-style BCD number.
-	Especially since we don't support non-numeric addresses.
 */
 class TLAddress : public TLElement {
 
@@ -83,27 +82,27 @@ private:
 
 	GSM::TypeOfNumber mType;
 	GSM::NumberingPlan mPlan;
-	GSM::L3BCDDigits mDigits;
+	const char* mAddressValue;
 
 public:
 
 	TLAddress():TLElement() {}
 
-	TLAddress(GSM::TypeOfNumber wType, GSM::NumberingPlan wPlan, const char* wDigits)
+	TLAddress(GSM::TypeOfNumber wType, GSM::NumberingPlan wPlan, const char* wAddressValue)
 		:TLElement(),
-		mType(wType),mPlan(wPlan),mDigits(wDigits)
+		mType(wType),mPlan(wPlan),mAddressValue(wAddressValue)
 	{ }
 
-	TLAddress(const char* wDigits)
+	TLAddress(const char* wAddressValue)
 		:TLElement(),
-		mType(GSM::NationalNumber),mPlan(GSM::E164Plan),mDigits(wDigits)
+		mType(GSM::AlphanumericNumber),mPlan(GSM::E164Plan),mAddressValue(wAddressValue)
 	{ }
 
-	const char *digits() const { return mDigits.digits(); }
+	const char *addressValue() const { return mAddressValue; }
 	GSM::TypeOfNumber type() const { return mType; }
 	GSM::NumberingPlan plan() const { return mPlan; }
 
-	size_t length() const { return 2 + mDigits.lengthV(); }
+	size_t length() const;
 	void parse(const TLFrame&, size_t&);
 	void write(TLFrame&, size_t&) const;
 	void text(std::ostream&) const;
@@ -251,7 +250,7 @@ class TLMessage {
 		- 7	RP (9.2.3.17)
 	*/
 	//@{
-	bool mMMS;			///< more messages to send
+	bool mMMS;                      ///< more messages to send (reversed-sense)
 	bool mRD;			///< reject duplicates
 	unsigned mVPF;		///< validity period format
 	bool mSRR;			///< status report request
@@ -277,14 +276,14 @@ class TLMessage {
 	};
 
 	TLMessage()
-		:mMMS(false),mSRI(false),mRP(false)
+		:mMMS(true),mSRI(false),mRP(false)
 	{}
 
 	virtual ~TLMessage(){}
 
 	virtual int MTI() const=0;
 
-	/** The bodtLength is everything beyond the header byte. */
+	/** The bodyLength is everything beyond the header byte. */
 	virtual size_t l2BodyLength() const = 0;
 
 	virtual size_t length() const { return 1+l2BodyLength(); }
@@ -299,6 +298,9 @@ class TLMessage {
 
 	virtual void text(std::ostream& os) const
 		{ os << MTI(); }
+
+	// Accessors
+	bool MMS() const { return mMMS; }
 
 	protected:
 
@@ -347,6 +349,7 @@ class TLSubmit : public TLMessage {
 
 	int MTI() const { return SUBMIT; }
 
+	const unsigned PI() const { return mPI; }
 	const TLAddress& DA() const { return mDA; }
 	const TLUserData& UD() const { return mUD; }
 
@@ -402,14 +405,16 @@ class TLDeliver : public TLMessage {
 	
 	int MTI() const { return DELIVER; }
 
+	const unsigned PID() const { return mPID; }
+	const TLAddress& OA() const { return mOA; }
+	const TLTimestamp& SCTS() const { return mSCTS; }
+	const TLUserData& UD() const { return mUD; }
+
 	size_t l2BodyLength() const;
 	void writeBody( TLFrame& frame, size_t& wp ) const;
 	void parseBody(const TLFrame&, size_t&) { assert(0); }
 	virtual void text( std::ostream& os ) const;
 };
-
-
-TLMessage * parseTL( const TLFrame& frame );
 
 
 //@} // SMS TL Messages

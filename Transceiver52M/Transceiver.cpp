@@ -36,13 +36,15 @@
 #include "config.h"
 #endif
 
-#define USB_LATENCY_INTRVL		(10,0)
+#define USB_LATENCY_INTRVL		10,0
 
 #if USE_UHD
-#  define USB_LATENCY_MIN		(6,7)
+#  define USB_LATENCY_MIN		6,7
 #else
-#  define USB_LATENCY_MIN		(1,1)
+#  define USB_LATENCY_MIN		1,1
 #endif
+
+#define INIT_ENERGY_THRSHD		5.0f
 
 Transceiver::Transceiver(int wBasePort,
 			 const char *TRXAddress,
@@ -51,7 +53,8 @@ Transceiver::Transceiver(int wBasePort,
 			 RadioInterface *wRadioInterface)
 	:mDataSocket(wBasePort+2,TRXAddress,wBasePort+102),
 	 mControlSocket(wBasePort+1,TRXAddress,wBasePort+101),
-	 mClockSocket(wBasePort,TRXAddress,wBasePort+100)
+	 mClockSocket(wBasePort,TRXAddress,wBasePort+100),
+	 mTSC(-1)
 {
   //GSM::Time startTime(0,0);
   //GSM::Time startTime(gHyperframe/2 - 4*216*60,0);
@@ -101,7 +104,7 @@ Transceiver::Transceiver(int wBasePort,
   mTxFreq = 0.0;
   mRxFreq = 0.0;
   mPower = -10;
-  mEnergyThreshold = 5.0; // based on empirical data
+  mEnergyThreshold = INIT_ENERGY_THRSHD;
   prevFalseDetectionTime = startTime;
 }
 
@@ -155,15 +158,25 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
 {
 
   // dump stale bursts, if any
+  unsigned BCCH_SCH_FCCH_CCCH_Frames[26] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,30,31,40,41};
+
   while (radioVector* staleBurst = mTransmitPriorityQueue.getStaleBurst(nowTime)) {
     // Even if the burst is stale, put it in the fillter table.
     // (It might be an idle pattern.)
+    // Now we do it only for BEACON channels.
     LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
     const GSM::Time& nextTime = staleBurst->getTime();
     int TN = nextTime.TN();
     int modFN = nextTime.FN() % fillerModulus[TN];
-    delete fillerTable[modFN][TN];
-    fillerTable[modFN][TN] = staleBurst;
+    if (TN==0) {
+       for (unsigned i =0; i < 26; i++) {
+         if(BCCH_SCH_FCCH_CCCH_Frames[i] == modFN) {
+            delete fillerTable[modFN][TN];
+            fillerTable[modFN][TN] = staleBurst;
+            break;
+         }
+       }
+    }
   }
   
   int TN = nowTime.TN();
@@ -172,8 +185,15 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   // if queue contains data at the desired timestamp, stick it into FIFO
   if (radioVector *next = (radioVector*) mTransmitPriorityQueue.getCurrentBurst(nowTime)) {
     LOG(DEBUG) << "transmitFIFO: wrote burst " << next << " at time: " << nowTime;
-    delete fillerTable[modFN][TN];
-    fillerTable[modFN][TN] = new signalVector(*(next));
+    if (TN==0) {
+       for (unsigned i =0; i < 26; i++) {
+         if(BCCH_SCH_FCCH_CCCH_Frames[i] == modFN) {
+            delete fillerTable[modFN][TN];
+            fillerTable[modFN][TN] = new signalVector(*(next));
+            break;
+         }
+       }
+    }
     mRadioInterface->driveTransmitRadio(*(next),(mChanType[TN]==NONE)); //fillerTable[modFN][TN]));
     delete next;
 #ifdef TRANSMIT_LOGGING
@@ -239,10 +259,7 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime)
       return TSC;*/
     break;
   case II:
-    if (burstFN % 2 == 1)
-      return IDLE;
-    else
-      return TSC;
+    return TSC;
     break;
   case III:
     return TSC;
@@ -475,7 +492,7 @@ void Transceiver::driveControl()
   }
   else if (strcmp(command,"POWERON")==0) {
     // turn on transmitter/demod
-    if (!mTxFreq || !mRxFreq) 
+    if (!mTxFreq || !mRxFreq || (mTSC<0))
       sprintf(response,"RSP POWERON 1");
     else {
       sprintf(response,"RSP POWERON 0");
@@ -506,6 +523,7 @@ void Transceiver::driveControl()
     int newGain;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&newGain);
     newGain = mRadioInterface->setRxGain(newGain);
+    mEnergyThreshold = INIT_ENERGY_THRSHD;
     sprintf(response,"RSP SETRXGAIN 0 %d",newGain);
   }
   else if (strcmp(command,"NOISELEV")==0) {
@@ -570,7 +588,7 @@ void Transceiver::driveControl()
     // set TSC
     int TSC;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&TSC);
-    if (mOn)
+    if (mOn || (TSC<0) || (TSC>7))
       sprintf(response,"RSP SETTSC 1 %d",TSC);
     else {
       mTSC = TSC;
@@ -579,11 +597,11 @@ void Transceiver::driveControl()
     }
   }
   else if (strcmp(command,"SETSLOT")==0) {
-    // set TSC 
+    // set slot type
     int  corrCode;
     int  timeslot;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&timeslot,&corrCode);
-    if ((timeslot < 0) || (timeslot > 7)) {
+    if ((mTSC<0) || (timeslot < 0) || (timeslot > 7)) {
       LOG(WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
@@ -595,6 +613,7 @@ void Transceiver::driveControl()
   }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
+    sprintf(response,"RSP ERR 1");
   }
 
   mControlSocket.write(response,strlen(response)+1);

@@ -85,6 +85,9 @@ class TransceiverManager {
 	ARFCNManager* ARFCN(unsigned i) { assert(i<mARFCNs.size()); return mARFCNs.at(i); }
 	//@}
 
+	bool haveClock() const { return mHaveClock; }
+
+	unsigned C0() const;
 	unsigned numARFCNs() const { return mARFCNs.size(); }
 
 	/** Block until the clock is set over the UDP link. */
@@ -169,8 +172,11 @@ class ARFCNManager {
 	/** Turn off the transceiver. */
 	bool powerOff();
 
-	/** Turn on the transceiver. */
-	bool powerOn();
+	/** 
+	    Turn on the transceiver. 
+	    @param warn Warn if the transceiver fails to start
+	*/
+	bool powerOn(bool warn);
 
         /**     
 		Set maximum expected delay spread.
@@ -205,6 +211,13 @@ class ARFCNManager {
 		@return true on success.
 	*/
 	bool setTSC(unsigned TSC);
+
+ 	/**
+		Set the BSIC (including setting TSC for all slots on the ARFCN).
+		@param BSIC BSIC to use.
+		@return true on success.
+	*/
+	bool setBSIC(unsigned BSIC);
 
 	/**
 		Describe the channel combination on a given slot.

@@ -1,7 +1,7 @@
 /*
 * Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
-* Copyright 2011 Range Networks, Inc.
+* Copyright 2011,2012 Range Networks, Inc.
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -107,16 +107,21 @@ pid_t gTransceiverPid = 0;
 
 void startTransceiver()
 {
+	// kill any stray transceiver process
+	system("killall transceiver");
+
 	// Start the transceiver binary, if the path is defined.
 	// If the path is not defined, the transceiver must be started by some other process.
-	char TRXnumARFCN[4];
-	sprintf(TRXnumARFCN,"%1u", (unsigned)gConfig.getNum("GSM.Radio.ARFCNs"));
-	LOG(NOTICE) << "starting transceiver " << transceiverPath << " " << TRXnumARFCN;
+	char TRXnumARFCN[16];                                                                                                                                   
+	char UHDargs[64];                                                                                                                                       
+	sprintf(TRXnumARFCN,"%1d", static_cast<int>(gConfig.getNum("GSM.Radio.ARFCNs")));                                                                       
+	sprintf(UHDargs,"%s", gConfig.getStr("GSM.Radio.UHDargs").c_str());                                                                                     
+	LOG(NOTICE) << "starting transceiver " << transceiverPath << " " << TRXnumARFCN << " " << UHDargs;
 	gTransceiverPid = vfork();
 	LOG_ASSERT(gTransceiverPid>=0);
 	if (gTransceiverPid==0) {
 		// Pid==0 means this is the process that starts the transceiver.
-		execlp(transceiverPath,transceiverPath,TRXnumARFCN,NULL);
+	    execlp(transceiverPath,transceiverPath,TRXnumARFCN,UHDargs,NULL);
 		LOG(EMERG) << "cannot find " << transceiverPath;
 		_exit(1);
 	} else {
@@ -132,6 +137,17 @@ void startTransceiver()
 
 int main(int argc, char *argv[])
 {
+	// TODO: Properly parse and handle any arguments
+	if (argc > 1) {
+		for (int argi = 0; argi < argc; argi++) {
+			if (!strcmp(argv[argi], "--version") ||
+			    !strcmp(argv[argi], "-v")) {
+				cout << gVersionString << endl;
+			}
+		}
+
+		return 0;
+	}
 
 	int sock = socket(AF_UNIX,SOCK_DGRAM,0);
 	if (sock<0) {
@@ -157,8 +173,22 @@ int main(int argc, char *argv[])
 
 	COUT("\nStarting the system...");
 
+	// is the radio running?
+	// Start the transceiver interface.
+	LOG(INFO) << "checking transceiver";
+	//gTRX.ARFCN(0)->powerOn();
+	//sleep(gConfig.getNum("TRX.Timeout.Start",2));
+	bool haveTRX = gTRX.ARFCN(0)->powerOn(false);
+
 	Thread transceiverThread;
-	transceiverThread.start((void*(*)(void*)) startTransceiver, NULL);
+	if (!haveTRX) {
+		transceiverThread.start((void*(*)(void*)) startTransceiver, NULL);
+		// sleep to let the FPGA code load
+		// TODO: we should be "pinging" the radio instead of sleeping
+		sleep(5);
+	} else {
+		LOG(NOTICE) << "transceiver already running";
+	}
 
 	// Start the SIP interface.
 	gSIPInterface.start();
@@ -168,9 +198,6 @@ int main(int argc, char *argv[])
 	// Configure the radio.
 	//
 
-	// Start the transceiver interface.
-	// Sleep long enough for the USRP to bootload.
-	sleep(10);
 	gTRX.start();
 
 	// Set up the interface to the radio.
@@ -179,7 +206,7 @@ int main(int argc, char *argv[])
 
 	// Tuning.
 	// Make sure its off for tuning.
-	C0radio->powerOff();
+	//C0radio->powerOff();
 	// Get the ARFCN list.
 	unsigned C0 = gConfig.getNum("GSM.Radio.C0");
 	unsigned numARFCNs = gConfig.getNum("GSM.Radio.ARFCNs");
@@ -191,8 +218,14 @@ int main(int argc, char *argv[])
 		radio->tune(ARFCN);
 	}
 
-	// Set TSC same as BCC everywhere.
-	C0radio->setTSC(gBTS.BCC());
+	// Send either TSC or full BSIC depending on radio need
+	if (gConfig.getBool("GSM.Radio.NeedBSIC")) {
+		// Send BSIC to 
+		C0radio->setBSIC(gBTS.BSIC());
+	} else {
+		// Set TSC same as BCC everywhere.
+		C0radio->setTSC(gBTS.BCC());
+	}
 
 	// Set maximum expected delay spread.
 	C0radio->setMaxDelay(gConfig.getNum("GSM.Radio.MaxExpectedDelaySpread"));
@@ -201,7 +234,7 @@ int main(int argc, char *argv[])
 	C0radio->setRxGain(gConfig.getNum("GSM.Radio.RxGain"));
 
 	// Turn on and power up.
-	C0radio->powerOn();
+	C0radio->powerOn(true);
 	C0radio->setPower(gConfig.getNum("GSM.Radio.PowerManager.MinAttenDB"));
 
 	//
@@ -309,7 +342,12 @@ int main(int argc, char *argv[])
 	gBTS.addPCH(&CCCH2);
 
 	// Be sure we are not over-reserving.
-	LOG_ASSERT(gConfig.getNum("GSM.CCCH.PCH.Reserve")<(int)gBTS.numAGCHs());
+	if (gConfig.getNum("GSM.Channels.SDCCHReserve",0)>=(int)gBTS.SDCCHTotal()) {
+		unsigned val = gBTS.SDCCHTotal() - 1;
+		LOG(CRIT) << "GSM.Channels.SDCCHReserve too big, changing to " << val;
+		gConfig.set("GSM.Channels.SDCCHReserve",val);
+	}
+
 
 	// OK, now it is safe to start the BTS.
 	gBTS.start();
@@ -356,7 +394,7 @@ int main(int argc, char *argv[])
 		LOG(EMERG) << "required configuration parameter " << e.key() << " not defined, aborting";
 	}
 
-	if (gTransceiverPid) kill(gTransceiverPid, SIGKILL);
+	//if (gTransceiverPid) kill(gTransceiverPid, SIGKILL);
 	close(sock);
 
 }

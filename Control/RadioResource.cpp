@@ -173,7 +173,8 @@ void AccessGrantResponder(
 	// Check for location update.
 	// This gives LUR a lower priority than other services.
 	if (requestingLUR(RA)) {
-		if (gBTS.SDCCHAvailable()<=gConfig.getNum("GSM.CCCH.PCH.Reserve")) {
+		// Don't answer this LUR if it will not leave enough channels open for other operations.
+		if ((int)gBTS.SDCCHAvailable()<=gConfig.getNum("GSM.Channels.SDCCHReserve")) {
 			unsigned waitTime = gBTS.growT3122()/1000;
 			LOG(WARNING) << "LUR congestion, RA=" << RA << " T3122=" << waitTime;
 			const L3ImmediateAssignmentReject reject(L3RequestReference(RA,when),waitTime);
@@ -296,6 +297,7 @@ void Control::PagingResponseHandler(const L3PagingResponse* resp, LogicalChannel
 		DCCH->send(L3ChannelRelease(0x41));
 		return;
 	}
+	LOG(INFO) << "paging reponse for transaction " << *transaction;
 	// Set the transaction channel.
 	transaction->channel(DCCH);
 	// We are looking for a mobile-terminated transaction.
@@ -416,7 +418,9 @@ unsigned Pager::pageAll()
 	// Clear expired entries.
 	PagingEntryList::iterator lp = mPageIDs.begin();
 	while (lp != mPageIDs.end()) {
-		if (!lp->expired()) ++lp;
+		bool expired = lp->expired();
+		bool defunct = gTransactionTable.find(lp->transactionID()) == NULL;
+		if (!expired && !defunct) ++lp;
 		else {
 			LOG(INFO) << "erasing " << lp->ID();
 			// Non-responsive, dead transaction?

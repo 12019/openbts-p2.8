@@ -29,7 +29,7 @@ INSERT INTO "CONFIG" VALUES('Control.VEA',1,0,1,'If not NULL, user very early as
 INSERT INTO "CONFIG" VALUES('GSM.Cipher','1',0,0,'Enable ciphering globally.');
 INSERT INTO "CONFIG" VALUES('GSM.CCCH.AGCH.QMax','5',0,0,'Maximum number of access grants to be queued for transmission on AGCH before declaring congrestion.');
 INSERT INTO "CONFIG" VALUES('GSM.CCCH.CCCH-CONF','1',0,0,'CCCH configuration type.  See GSM 10.5.2.11 for encoding.  Value of 1 means we are using a C-V beacon.  Any other value selects a C-IV beacon.');
-INSERT INTO "CONFIG" VALUES('GSM.CCCH.PCH.Reserve','0',0,0,'Number of CCCH subchannels to reserve for paging.');
+INSERT INTO "CONFIG" VALUES('GSM.Channels.SDCCHReserve','0',0,0,'Number of SDCCHs to reserve for non-LUR operations. This can be used to force LUR transactions into a lower priority.');
 INSERT INTO "CONFIG" VALUES('GSM.CellSelection.CELL-RESELECT-HYSTERESIS','3',0,0,'Cell Reselection Hysteresis.  See GSM 04.08 10.5.2.4, Table 10.5.23 for encoding.  Encoding is $2N$ dB, values of $N$ are 0...7 for 0...14 dB.');
 INSERT INTO "CONFIG" VALUES('GSM.CellSelection.MS-TXPWR-MAX-CCH','0',0,0,'Cell selection parameters.  See GSM 04.08 10.5.2.4.');
 INSERT INTO "CONFIG" VALUES('GSM.CellSelection.NCCsPermitted','1',0,0,'NCCs Permitted.  An 8-bit mask of allowed NCCs.  Unless you are coordinating with another carrier, this should probably just select your own NCC.');
@@ -58,6 +58,9 @@ INSERT INTO "CONFIG" VALUES('GSM.RACH.AC','1024',0,0,'Access class flags.  This 
 INSERT INTO "CONFIG" VALUES('GSM.RACH.MaxRetrans','1',0,0,'Maximum RACH retransmission attempts.  This is the raw parameter sent on the BCCH.  See GSM 04.08 10.5.2.29 for encoding.');
 INSERT INTO "CONFIG" VALUES('GSM.RACH.TxInteger','14',0,0,'Parameter to spread RACH busts over time.  This is the raw parameter sent on the BCCH.  See GSM 04.08 10.5.2.29 for encoding.');
 INSERT INTO "CONFIG" VALUES('GSM.Radio.ARFCNs','1 ',1,0,'The number of ARFCNs to use.  The ARFCN set will be C0, C0+2, C0+4, etc.  Static.');
+INSERT INTO "CONFIG" VALUES('GSM.Radio.UHDargs','addr=192.168.10.2',0,0,'Arguments to pass to UHD.');
+INSERT INTO "CONFIG" VALUES('GSM.Radio.TxAntenna','',0,0,'Transmit antenna string to pass to UHD.');
+INSERT INTO "CONFIG" VALUES('GSM.Radio.RxAntenna','',0,0,'Receive antenna string to pass to UHD.');
 INSERT INTO "CONFIG" VALUES('GSM.RADIO-LINK-TIMEOUT','15',0,0,' L1 radio link timeout.  This is the raw parameter sent on the BCCH; see GSM 10.5.2.3 for encoding. Should be coordinated with T3109.');
 INSERT INTO "CONFIG" VALUES('GSM.RRLP.ACCURACY','40',0,0,'Requested accuracy of location request. K in 10(1.1**K-1). See 3GPP 03.32, sect 6.2');
 INSERT INTO "CONFIG" VALUES('GSM.RRLP.ALMANAC.REFRESH.TIME','24.0',0,0,'How often the almanac is refreshed, in hours');
@@ -82,6 +85,7 @@ INSERT INTO "CONFIG" VALUES('GSM.Radio.PowerManager.SamplePeriod','2000',0,0,'Sa
 INSERT INTO "CONFIG" VALUES('GSM.Radio.PowerManager.TargetT3122','5000',0,0,'Target value for T3122, the random access hold-off timer, for the power control loop.');
 INSERT INTO "CONFIG" VALUES('GSM.Radio.RxGain','47',1,0,'Receiver gain setting in dB.  Ideal value is dictacted by the hardware.  This database parameter is static but the receiver gain can be modified in real time with the CLI rxgain command.  Static.');
 INSERT INTO "CONFIG" VALUES('GSM.Radio.RSSITarget','-50',0,0,'Target uplink RSSI for MS power control loop, in dB wrt to A/D full scale.  Should be 6-10 dB above the noise floor.');
+INSERT INTO "CONFIG" VALUES('GSM.Radio.NeedBSIC','0',0,0,'Does the Radio type require the full BSIC');
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3113','10000',0,0,'Paging timer T3113 in ms.  This is the timeout for a handset to respond to a paging request.  This should usually be the same as SIP.Timer.B in your VoIP network.');
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3122Max','255000',0,0,'Maximum allowed value for T3122, the RACH holdoff timer, in milliseconds.');
 INSERT INTO "CONFIG" VALUES('GSM.Timer.T3122Min','2000',0,0,'Minimum allowed value for T3122, the RACH holdoff timer, in milliseconds.');
@@ -126,6 +130,8 @@ INSERT INTO "CONFIG" VALUES('SubscriberRegistry.Port','5064',0,0,'Port used by t
 INSERT INTO "CONFIG" VALUES('TRX.IP','127.0.0.1',1,0,'IP address of the transceiver application.  Static.');
 INSERT INTO "CONFIG" VALUES('TRX.Port','5700',1,0,'IP port of the transceiver application.  Static.');
 INSERT INTO "CONFIG" VALUES('TRX.RadioFrequencyOffset','128',1,0,'Fine-tuning adjustment for the transceiver master clock.  Roughly 170 Hz/step.  Set at the factory.  Do not adjust without proper calibration.  Static.');
+INSERT INTO "CONFIG" VALUES('TRX.Timeout.Clock','10',0,1,'How long to wait during a read operation from the transceiver before giving up.');
+INSERT INTO "CONFIG" VALUES('TRX.Timeout.Start','2',0,1,'How long to wait during system startup before checking to see if the transceiver can be reached.');
 INSERT INTO "CONFIG" VALUES('TRX.TxAttenOffset','2',1,0,'Hardware-specific gain adjustment for transmitter, matched to the power amplifier, expessed as an attenuationi in dB.  Set at the factory.  Do not adjust without proper calibration.  Static.');
 INSERT INTO "CONFIG" VALUES('TestCall.Port','28670',0,0,'Port for exchanging L3 packets with the testcall feature.');
 COMMIT;

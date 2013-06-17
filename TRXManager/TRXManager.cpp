@@ -85,7 +85,7 @@ void* ClockLoopAdapter(TransceiverManager *transceiver)
 void TransceiverManager::clockHandler()
 {
 	char buffer[MAX_UDP_LENGTH];
-	int msgLen = mClockSocket.read(buffer,3000);
+	int msgLen = mClockSocket.read(buffer,gConfig.getNum("TRX.Timeout.Clock",10)*1000);
 
 	// Did the transceiver die??
 	if (msgLen<0) {
@@ -113,6 +113,11 @@ void TransceiverManager::clockHandler()
 
 
 
+
+unsigned TransceiverManager::C0() const
+{
+	return mARFCNs.at(0)->ARFCN();
+}
 
 
 
@@ -253,9 +258,9 @@ int ::ARFCNManager::sendCommandPacket(const char* command, char* response)
 	LOG(INFO) << "command " << command;
 	mControlLock.lock();
 
-	for (int retry=0; retry<10; retry++) {
+	for (int retry=0; retry<5; retry++) {
 		mControlSocket.write(command);
-		msgLen = mControlSocket.read(response,3000);
+		msgLen = mControlSocket.read(response,1000);
 		if (msgLen>0) {
 			response[msgLen] = '\0';
 			break;
@@ -264,14 +269,14 @@ int ::ARFCNManager::sendCommandPacket(const char* command, char* response)
 	}
 
 	mControlLock.unlock();
-	LOG(DEBUG) << "response " << response;
+	LOG(INFO) << "response " << response;
 
 	if ((msgLen>4) && (strncmp(response,"RSP ",4)==0)) {
 		return msgLen;
 	}
 
-	LOG(ALERT) << "lost control link to transceiver";
-	SOCKET_ERROR;
+	LOG(NOTICE) << "lost control link to transceiver";
+	return 0;
 }
 
 
@@ -394,11 +399,16 @@ bool ::ARFCNManager::powerOff()
 }
 
 
-bool ::ARFCNManager::powerOn()
+bool ::ARFCNManager::powerOn(bool warn)
 {
 	int status = sendCommand("POWERON");
 	if (status!=0) {
-		LOG(ALERT) << "POWERON failed with status " << status;
+		if (warn){
+			LOG(ALERT) << "POWERON failed with status " << status;
+		}
+		else {
+			LOG(INFO) << "POWERON failed with status " << status;		    
+		}	
 		return false;
 	}
 	return true;
@@ -425,6 +435,18 @@ bool ::ARFCNManager::setTSC(unsigned TSC)
 	int status = sendCommand("SETTSC",TSC);
 	if (status!=0) {
 		LOG(ALERT) << "SETTSC failed with status " << status;
+		return false;
+	}
+	return true;
+}
+
+
+bool ::ARFCNManager::setBSIC(unsigned BSIC)
+{
+	assert(BSIC < 64);
+	int status = sendCommand("SETBSIC",BSIC);
+	if (status!=0) {
+		LOG(ALERT) << "SETBSIC failed with status " << status;
 		return false;
 	}
 	return true;
