@@ -171,7 +171,7 @@ void AuthenticationParameters::set_AUTN(string AUTN)
     int len = osmo_hexparse(AUTN.c_str(), autn, 18);
     switch (len) {
     case 18: mAUTN = L3AUTN(autn); mAUTNset = true; // complete TLV
-    case 16: memcpy(preautn, autn, 16); mAUTN = L3AUTN(autn); mAUTNset = true; // Value only
+    case 16: memcpy(preautn + 2, autn, 16); mAUTN = L3AUTN(preautn); mAUTNset = true; // Value only
     default: LOG(ERR) << "Failed to parse AUTN " << AUTN << " length: " << len;
     }
 }
