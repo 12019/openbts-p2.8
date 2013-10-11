@@ -34,14 +34,18 @@
 #include <limits.h>
 
 
-#define DEFAULT_CMD_PATH "/var/run/command"
+#define DEFAULT_CMD_PATH "command"
 
 int main(int argc, char *argv[])
 {
-	const char* cmdPath = DEFAULT_CMD_PATH;
-	if (argc!=1) {
-		cmdPath = argv[1];
-	}
+    char * cmd;
+    const char* cmdPath = DEFAULT_CMD_PATH;
+    if (argc != 2) {
+	printf("OpenBTSDo command\n");
+	exit(1);
+    }
+    
+    cmd = argv[1];
 
 	char rspPath[200];
 	sprintf(rspPath,"/tmp/OpenBTS.do.%d",getpid());
@@ -56,12 +60,12 @@ int main(int argc, char *argv[])
 	// destination address
 	struct sockaddr_un cmdSockName;
 	cmdSockName.sun_family = AF_UNIX;
-	strcpy(cmdSockName.sun_path,cmdPath);
+	strcpy(cmdSockName.sun_path, cmdPath);
 
 	// locally bound address
 	struct sockaddr_un rspSockName;
 	rspSockName.sun_family = AF_UNIX;
-	strcpy(rspSockName.sun_path,rspPath);
+	strcpy(rspSockName.sun_path, rspPath);
 	if (bind(sock, (struct sockaddr *) &rspSockName, sizeof(struct sockaddr_un))) {
 		perror("binding name to datagram socket");
 		exit(1);
@@ -69,23 +73,23 @@ int main(int argc, char *argv[])
 
 
 	char *inbuf = (char*)malloc(200);
-	char *cmd = fgets(inbuf,199,stdin);
-	if (!cmd) exit(0);
+//	char *cmd = fgets(inbuf,199,stdin);
+//	if (!cmd) exit(0);
 
-	if (sendto(sock,cmd,strlen(cmd)+1,0,(struct sockaddr*)&cmdSockName,sizeof(cmdSockName))<0) {
+	if (sendto(sock, cmd, strlen(cmd) + 1, 0, (struct sockaddr*)&cmdSockName, sizeof(cmdSockName)) < 0) {
 		perror("sending datagram");
 		exit(1);
 	}
 
 	const int bufsz = 1500;
 	char resbuf[bufsz];
-	int nread = recv(sock,resbuf,bufsz-1,0);
-	if (nread<0) {
+	int nread = recv(sock, resbuf, bufsz-1,0);
+	if (nread < 0) {
 		perror("receiving response");
 		exit(1);
 	}
 	resbuf[nread] = '\0';
-	printf("%s\n",resbuf);
+	printf("%s\n", resbuf);
 
 	close(sock);
 }
