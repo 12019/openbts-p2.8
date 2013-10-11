@@ -408,13 +408,20 @@ bool SubscriberRegistry::useGateway(string ISDN)
 
 void SubscriberRegistry::stringToUint(string strRAND, uint64_t *hRAND, uint64_t *lRAND)
 {
-	assert(strRAND.size() == 32);
+    if (strRAND.size() != 32) {
+	LOG(DEBUG) << "RAND::" << strRAND.size() << " - " << strRAND;
+    }
+//	assert(strRAND.size() == 32);
 	string strhRAND = strRAND.substr(0, 16);
 	string strlRAND = strRAND.substr(16, 16);
 	stringstream ssh;
+	ssh.width(16);
+	ssh.fill('0');
 	ssh << hex << strhRAND;
 	ssh >> *hRAND;
 	stringstream ssl;
+	ssl.width(16);
+	ssl.fill('0');
 	ssl << hex << strlRAND;
 	ssl >> *lRAND;
 }

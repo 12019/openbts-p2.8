@@ -249,11 +249,11 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	if (!success && !openRegistration) {
 		LOG(INFO) << "registration FAILED: " << mobileID;
 		DCCH->send(L3LocationUpdatingReject(gConfig.getNum("Control.LUR.UnprovisionedRejectCause")));
-		if (!preexistingTMSI) {
+/*		if (!preexistingTMSI) {
 			sendWelcomeMessage( "Control.LUR.FailedRegistration.Message",
 				"Control.LUR.FailedRegistration.ShortCode", IMSI,DCCH);
 		}
-		// Release the channel and return.
+*/		// Release the channel and return.
 		DCCH->send(L3ChannelRelease());
 		return;
 	}
