@@ -157,9 +157,9 @@ static const char* createSBTable = {
 int SubscriberRegistry::init()
 {
 	string ldb = gConfig.getStr("SubscriberRegistry.db");
-	int rc = sqlite3_open(ldb.c_str(),&mDB);
+	int rc = sqlite3_open(ldb.c_str(), &mDB);
 	if (rc) {
-		LOG(EMERG) << "Cannot open SubscriberRegistry database: " << sqlite3_errmsg(mDB);
+		LOG(EMERG) << "Cannot open SubscriberRegistry database " << ldb.c_str() << ": " << sqlite3_errmsg(mDB);
 		sqlite3_close(mDB);
 		mDB = NULL;
 		return FAILURE;
