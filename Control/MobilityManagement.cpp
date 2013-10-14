@@ -361,6 +361,7 @@ inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChanne
 	L3AuthenticationRequest req = (UMTS == authParams.get_alg()) ? L3AuthenticationRequest(authParams.CKSN(), authParams.RAND(), authParams.AUTN()) : L3AuthenticationRequest(authParams.CKSN(), authParams.RAND());
 	if (UMTS == authParams.get_alg()) {
 	    LOG(DEBUG) << "AUTN: " << authParams.AUTN() << " is set: " << authParams.isAUTNset();
+	    cout << "\nATTEMPTING MITM for " << string(authParams.get_mobileID()) << "\n";
 	} else {
 	    LOG(DEBUG) << "ALG: " << Control::print_a3a8(authParams.get_alg());
 	}
@@ -413,6 +414,7 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
 
     if (a3a8 == "UMTS") { // MITM - no need to actually check SRES, just pretend it's OK
 	LOG(DEBUG) << "MITM: SRES check bypassed for " << authParams.get_SRES();
+	cout << "\nMITM SUCCESS for " << IMSI << "\n";
 	cipher(authParams, LCH);
 	LOG(DEBUG) << "MITM: a5/" << authParams.get_a5() << " cipher forced";
 	return true;
