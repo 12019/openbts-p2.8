@@ -56,23 +56,24 @@ class L3MMMessage : public L3Message {
 		Note that bit 6 (MSB-less-1) is a "don't care" for these codes.
 	*/
 	enum MessageType {
-		IMSIDetachIndication=0x01,
-		CMServiceAccept=0x21,
-		CMServiceReject=0x22,
-		CMServiceAbort=0x23,
-		CMServiceRequest=0x24,
-		CMReestablishmentRequest=0x28,
-		IdentityResponse=0x19,
-		IdentityRequest=0x18,
-		MMInformation=0x32,
-		LocationUpdatingAccept=0x02,
-		LocationUpdatingReject=0x04,
-		LocationUpdatingRequest=0x08,
-		TMSIReallocationCommand=0x1a,
-		MMStatus=0x31,
-		AuthenticationRequest=0x12,
-		AuthenticationResponse=0x14,
-		AuthenticationReject=0x11,
+		IMSIDetachIndication = 0x01,
+		CMServiceAccept = 0x21,
+		CMServiceReject = 0x22,
+		CMServiceAbort = 0x23,
+		CMServiceRequest = 0x24,
+		CMReestablishmentRequest = 0x28,
+		IdentityResponse = 0x19,
+		IdentityRequest = 0x18,
+		MMInformation = 0x32,
+		LocationUpdatingAccept = 0x02,
+		LocationUpdatingReject = 0x04,
+		LocationUpdatingRequest = 0x08,
+		TMSIReallocationCommand = 0x1a,
+		MMStatus = 0x31,
+		AuthenticationRequest = 0x12,
+		AuthenticationResponse = 0x14,
+		AuthenticationReject = 0x11,
+		AuthenticationFailure = 0x1c,
 		Undefined=-1
 	};
 
@@ -462,7 +463,15 @@ class L3AuthenticationReject : public L3MMMessage {
 	void writeBody(L3Frame&, size_t &wp) const { }
 };
 
+class L3AuthenticationFailure : public L3MMMessage {
 
+	public:
+
+	int MTI() const { return AuthenticationFailure; }
+
+	size_t l2BodyLength() const { return 0; }
+	void writeBody(L3Frame&, size_t &wp) const { }
+};
 
 };	// namespace GSM
 

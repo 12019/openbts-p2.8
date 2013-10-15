@@ -97,6 +97,7 @@ L3MMMessage* GSM::L3MMFactory(L3MMMessage::MessageType MTI)
 	  case L3MMMessage::MMStatus: return new L3MMStatus;
 	  case L3MMMessage::IdentityResponse: return new L3IdentityResponse;
 	  case L3MMMessage::AuthenticationResponse: return new L3AuthenticationResponse;
+	case L3MMMessage::AuthenticationFailure: return new L3AuthenticationFailure;
 	  default:
 	    LOG(WARNING) << "no L3 MM factory support for message " << MTI;
 		return NULL;

@@ -370,11 +370,19 @@ inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChanne
 	L3Message* msg = getMessage(LCH);
 	L3AuthenticationResponse* resp = dynamic_cast<L3AuthenticationResponse*>(msg);
 	if (!resp) {
-	    if (msg) {
-		LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
-		delete msg;
+	    L3AuthenticationFailure* fail = dynamic_cast<L3AuthenticationFailure*>(msg);
+	    if (!fail) {
+		if (msg) {
+		    LOG(DEBUG) << "Waiting for L3AuthenticationResponse, got Unexpected message " << *msg;
+		    delete msg;
+		}
+		throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
 	    }
-	    throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
+	    else {
+		//LOG(DEBUG) << "Recieved L3AuthenticationFailure " << *fail;
+		cout << "\nAUTH FAIL for " << string(authParams.get_mobileID()) << "\n";
+		return 0;
+	    }
 	}
 	return resp->SRES().value();
 	LOG(DEBUG) << "Recieved L3AuthenticationResponse " << *resp;
