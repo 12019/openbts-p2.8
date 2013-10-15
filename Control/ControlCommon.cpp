@@ -170,8 +170,8 @@ void AuthenticationParameters::set_AUTN(string AUTN)
     preautn[0] = 0x20, preautn[1] = 16; // manually set length and type
     int len = osmo_hexparse(AUTN.c_str(), autn, 18);
     switch (len) {
-    case 18: mAUTN = L3AUTN(autn); mAUTNset = true; // complete TLV
-    case 16: memcpy(preautn + 2, autn, 16); mAUTN = L3AUTN(preautn); mAUTNset = true; // Value only
+    case 18: mAUTN = L3AUTN(autn); mAUTNset = true; break; // complete TLV
+    case 16: memcpy(preautn + 2, autn, 16); mAUTN = L3AUTN(preautn); mAUTNset = true; break; // Value only
     default: LOG(ERR) << "Failed to parse AUTN " << AUTN << " length: " << len;
     }
 }
