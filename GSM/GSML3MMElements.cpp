@@ -76,9 +76,12 @@ void L3RejectCause::writeV( L3Frame& dest, size_t &wp ) const
 }
 
 
-void L3RejectCause::text(ostream& os) const
-{	
-	os <<"0x"<< hex << mRejectCause << dec;	
+void L3RejectCause::text(ostream& os) const {	
+    switch(mRejectCause) {
+    case 0x14: os << "MAC Failure"; break;
+    case 0x15: os << "Synch Failure"; break;
+    default: os << "0x" << hex << mRejectCause << dec;
+    }
 }
 
 void L3RejectCause::parseV(const L3Frame & src, size_t & rp)

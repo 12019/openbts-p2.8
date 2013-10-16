@@ -379,8 +379,8 @@ inline uint32_t auth_re(AuthenticationParameters& authParams, GSM::LogicalChanne
 		throw UnexpectedMessage(); // FIXME -- We should differentiate between wrong message and no message at all.
 	    }
 	    else {
-		//LOG(DEBUG) << "Recieved L3AuthenticationFailure " << *fail;
-		cout << "\nAUTH FAIL for " << string(authParams.get_mobileID()) << "\n";
+		LOG(DEBUG) << "Recieved L3AuthenticationFailure " << *fail;
+		cout << "\nAUTH FAIL for " << string(authParams.get_mobileID()) << ": " << *fail <<"\n";
 		return 0;
 	    }
 	}

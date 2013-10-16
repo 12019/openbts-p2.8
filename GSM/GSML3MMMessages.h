@@ -451,6 +451,17 @@ class L3AuthenticationResponse : public L3MMMessage {
 	void text(std::ostream&) const;
 };
 
+class L3AuthenticationFailure : public L3MMMessage {
+private:
+    L3RejectCause mReason;
+
+public:
+    L3RejectCause why() { return mReason; }
+    int MTI() const { return AuthenticationFailure; }
+    size_t l2BodyLength() const { return mReason.lengthV(); }
+    void parseBody(const L3Frame&, size_t &rp);
+    void text(std::ostream&) const;
+};
 
 /** GSM 04.08 9.2.1 */
 class L3AuthenticationReject : public L3MMMessage {
@@ -463,15 +474,6 @@ class L3AuthenticationReject : public L3MMMessage {
 	void writeBody(L3Frame&, size_t &wp) const { }
 };
 
-class L3AuthenticationFailure : public L3MMMessage {
-
-	public:
-
-	int MTI() const { return AuthenticationFailure; }
-
-	size_t l2BodyLength() const { return 0; }
-	void writeBody(L3Frame&, size_t &wp) const { }
-};
 
 };	// namespace GSM
 

@@ -341,7 +341,14 @@ void L3AuthenticationRequest::text(ostream& os) const {
     if (autn_present) os << " " << mAUTN;
 }
 
+void L3AuthenticationFailure::parseBody(const L3Frame& src, size_t& rp) {
+    mReason.parseV(src,rp);
+}
 
+void L3AuthenticationFailure::text(ostream& os) const {
+    L3MMMessage::text(os);
+    os << "Authentication Failure due to " << mReason;
+}
 
 void L3AuthenticationResponse::parseBody(const L3Frame& src, size_t& rp) { mSRES.parseV(src,rp); }
 
