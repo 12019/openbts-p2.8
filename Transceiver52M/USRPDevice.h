@@ -115,7 +115,7 @@ private:
   USRPDevice (double _desiredSampleRate, bool skipRx);
 
   /** Instantiate the USRP */
-  bool open(const std::string &);
+  bool open(); 
 
   /** Start the USRP */
   bool start();
@@ -198,11 +198,6 @@ private:
   /** return minimum Rx Gain **/
   double minTxGain(void);
 
-// make compiler happy
-  void setTxAntenna(std::string &name) { assert(0); }
-  void setRxAntenna(std::string &name) { assert(0); }
-  std::string getRxAntenna() { assert(0); return NULL; }
-  std::string getTxAntenna() { assert(0); return NULL; }
 
   /** Return internal status values */
   inline double getTxFreq() { return 0;}

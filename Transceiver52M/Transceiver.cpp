@@ -32,19 +32,7 @@
 #include "Transceiver.h"
 #include <Logger.h>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
-#define USB_LATENCY_INTRVL		10,0
-
-#if USE_UHD
-#  define USB_LATENCY_MIN		6,7
-#else
-#  define USB_LATENCY_MIN		1,1
-#endif
-
-#define INIT_ENERGY_THRSHD		5.0f
 
 Transceiver::Transceiver(int wBasePort,
 			 const char *TRXAddress,
@@ -53,8 +41,7 @@ Transceiver::Transceiver(int wBasePort,
 			 RadioInterface *wRadioInterface)
 	:mDataSocket(wBasePort+2,TRXAddress,wBasePort+102),
 	 mControlSocket(wBasePort+1,TRXAddress,wBasePort+101),
-	 mClockSocket(wBasePort,TRXAddress,wBasePort+100),
-	 mTSC(-1)
+	 mClockSocket(wBasePort,TRXAddress,wBasePort+100)
 {
   //GSM::Time startTime(0,0);
   //GSM::Time startTime(gHyperframe/2 - 4*216*60,0);
@@ -104,7 +91,7 @@ Transceiver::Transceiver(int wBasePort,
   mTxFreq = 0.0;
   mRxFreq = 0.0;
   mPower = -10;
-  mEnergyThreshold = INIT_ENERGY_THRSHD;
+  mEnergyThreshold = 5.0; // based on empirical data
   prevFalseDetectionTime = startTime;
 }
 
@@ -158,25 +145,15 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
 {
 
   // dump stale bursts, if any
-  unsigned BCCH_SCH_FCCH_CCCH_Frames[26] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,30,31,40,41};
-
   while (radioVector* staleBurst = mTransmitPriorityQueue.getStaleBurst(nowTime)) {
     // Even if the burst is stale, put it in the fillter table.
     // (It might be an idle pattern.)
-    // Now we do it only for BEACON channels.
     LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
     const GSM::Time& nextTime = staleBurst->getTime();
     int TN = nextTime.TN();
     int modFN = nextTime.FN() % fillerModulus[TN];
-    if (TN==0) {
-       for (unsigned i =0; i < 26; i++) {
-         if(BCCH_SCH_FCCH_CCCH_Frames[i] == modFN) {
-            delete fillerTable[modFN][TN];
-            fillerTable[modFN][TN] = staleBurst;
-            break;
-         }
-       }
-    }
+    delete fillerTable[modFN][TN];
+    fillerTable[modFN][TN] = staleBurst;
   }
   
   int TN = nowTime.TN();
@@ -185,15 +162,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   // if queue contains data at the desired timestamp, stick it into FIFO
   if (radioVector *next = (radioVector*) mTransmitPriorityQueue.getCurrentBurst(nowTime)) {
     LOG(DEBUG) << "transmitFIFO: wrote burst " << next << " at time: " << nowTime;
-    if (TN==0) {
-       for (unsigned i =0; i < 26; i++) {
-         if(BCCH_SCH_FCCH_CCCH_Frames[i] == modFN) {
-            delete fillerTable[modFN][TN];
-            fillerTable[modFN][TN] = new signalVector(*(next));
-            break;
-         }
-       }
-    }
+    delete fillerTable[modFN][TN];
+    fillerTable[modFN][TN] = new signalVector(*(next));
     mRadioInterface->driveTransmitRadio(*(next),(mChanType[TN]==NONE)); //fillerTable[modFN][TN]));
     delete next;
 #ifdef TRANSMIT_LOGGING
@@ -259,7 +229,10 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime)
       return TSC;*/
     break;
   case II:
-    return TSC;
+    if (burstFN % 2 == 1)
+      return IDLE;
+    else
+      return TSC;
     break;
   case III:
     return TSC;
@@ -492,7 +465,7 @@ void Transceiver::driveControl()
   }
   else if (strcmp(command,"POWERON")==0) {
     // turn on transmitter/demod
-    if (!mTxFreq || !mRxFreq || (mTSC<0))
+    if (!mTxFreq || !mRxFreq) 
       sprintf(response,"RSP POWERON 1");
     else {
       sprintf(response,"RSP POWERON 0");
@@ -523,7 +496,6 @@ void Transceiver::driveControl()
     int newGain;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&newGain);
     newGain = mRadioInterface->setRxGain(newGain);
-    mEnergyThreshold = INIT_ENERGY_THRSHD;
     sprintf(response,"RSP SETRXGAIN 0 %d",newGain);
   }
   else if (strcmp(command,"NOISELEV")==0) {
@@ -588,7 +560,7 @@ void Transceiver::driveControl()
     // set TSC
     int TSC;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&TSC);
-    if (mOn || (TSC<0) || (TSC>7))
+    if (mOn)
       sprintf(response,"RSP SETTSC 1 %d",TSC);
     else {
       mTSC = TSC;
@@ -597,11 +569,11 @@ void Transceiver::driveControl()
     }
   }
   else if (strcmp(command,"SETSLOT")==0) {
-    // set slot type
+    // set TSC 
     int  corrCode;
     int  timeslot;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&timeslot,&corrCode);
-    if ((mTSC<0) || (timeslot < 0) || (timeslot > 7)) {
+    if ((timeslot < 0) || (timeslot > 7)) {
       LOG(WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
@@ -613,7 +585,6 @@ void Transceiver::driveControl()
   }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
-    sprintf(response,"RSP ERR 1");
   }
 
   mControlSocket.write(response,strlen(response)+1);
@@ -745,8 +716,8 @@ void Transceiver::driveTransmitFIFO()
       //   enough.  Need to increase latency by one GSM frame.
       if (mRadioInterface->getBus() == RadioDevice::USB) {
         if (mRadioInterface->isUnderrun()) {
-          // only update latency at the defined frame interval
-          if (radioClock->get() > mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL)) {
+          // only do latency update every 10 frames, so we don't over update
+          if (radioClock->get() > mLatencyUpdateTime + GSM::Time(10,0)) {
             mTransmitLatency = mTransmitLatency + GSM::Time(1,0);
             LOG(INFO) << "new latency: " << mTransmitLatency;
             mLatencyUpdateTime = radioClock->get();
@@ -755,7 +726,7 @@ void Transceiver::driveTransmitFIFO()
         else {
           // if underrun hasn't occurred in the last sec (216 frames) drop
           //    transmit latency by a timeslot
-          if (mTransmitLatency > GSM::Time(USB_LATENCY_MIN)) {
+          if (mTransmitLatency > GSM::Time(1,1)) {
               if (radioClock->get() > mLatencyUpdateTime + GSM::Time(216,0)) {
               mTransmitLatency.decTN();
               LOG(INFO) << "reduced latency: " << mTransmitLatency;

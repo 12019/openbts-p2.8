@@ -75,7 +75,7 @@ USRPDevice::USRPDevice (double _desiredSampleRate, bool skipRx)
 #endif
 }
 
-bool USRPDevice::open(const std::string &)
+bool USRPDevice::open()
 {
   writeLock.unlock();
 
@@ -261,7 +261,7 @@ double USRPDevice::setTxGain(double dB) {
 
    LOG(NOTICE) << "Setting TX gain to " << dB << " dB.";
 
-   if (!m_dbTx->set_gain(dB))
+   if (!m_dbRx->set_gain(dB))
      LOG(ERR) << "Error setting TX gain";
 
    writeLock.unlock();

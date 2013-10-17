@@ -15,7 +15,6 @@
 #ifndef __RADIO_DEVICE_H__
 #define __RADIO_DEVICE_H__
 
-#include <string>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -34,7 +33,7 @@ class RadioDevice {
   static RadioDevice *make(double desiredSampleRate, bool skipRx = false);
 
   /** Initialize the USRP */
-  virtual bool open(const std::string &args)=0;
+  virtual bool open()=0;
 
   /** Start the USRP */
   virtual bool start()=0;
@@ -116,12 +115,6 @@ class RadioDevice {
 
   /** return minimum Tx Gain **/
   virtual double minTxGain(void) = 0;
-
-  /** set and return antennas selection **/
-  virtual void setTxAntenna(std::string &name) = 0;
-  virtual void setRxAntenna(std::string &name) = 0;
-  virtual std::string getRxAntenna() = 0;
-  virtual std::string getTxAntenna() = 0;
 
   /** Return internal status values */
   virtual double getTxFreq()=0;

@@ -22,9 +22,8 @@
 #include "radioDevice.h"
 #include "Threads.h"
 #include "Logger.h"
-#include <uhd/version.hpp>
 #include <uhd/property_tree.hpp>
-#include <uhd/usrp/multi_usrp.hpp>
+#include <uhd/usrp/single_usrp.hpp>
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/msg.hpp>
 
@@ -48,17 +47,15 @@
 
     tx_ampl           - Transmit amplitude must be between 0 and 1.0
 */
-const double master_clk_rt = 13e6;
+const double master_clk_rt = 52e6;
 const size_t smpl_buf_sz = (1 << 20);
 const float tx_ampl = .3;
 
 #ifdef RESAMPLE
 const double rx_smpl_offset = .00005;
 #else
-const double rx_smpl_offset = 9.4457e-5; 
+const double rx_smpl_offset = .0000869;
 #endif
-
-static TIMESTAMP init_rd_ts = 0;
 
 /** Timestamp conversion
     @param timestamp a UHD or OpenBTS timestamp
@@ -153,7 +150,7 @@ public:
 	uhd_device(double rate, bool skip_rx);
 	~uhd_device();
 
-	bool open(const std::string &args);
+	bool open();
 	bool start();
 	bool stop();
 	void restart(uhd::time_spec_t ts);
@@ -171,8 +168,8 @@ public:
 	bool setTxFreq(double wFreq);
 	bool setRxFreq(double wFreq);
 
-	inline TIMESTAMP initialWriteTimestamp() { return init_rd_ts; }
-	inline TIMESTAMP initialReadTimestamp() { return init_rd_ts; }
+	inline TIMESTAMP initialWriteTimestamp() { return 0; }
+	inline TIMESTAMP initialReadTimestamp() { return 0; }
 
 	inline double fullScaleInputValue() { return 32000 * tx_ampl; }
 	inline double fullScaleOutputValue() { return 32000; }
@@ -185,10 +182,6 @@ public:
 	double setTxGain(double db);
 	double maxTxGain(void) { return tx_gain_max; }
 	double minTxGain(void) { return tx_gain_min; }
-	void setTxAntenna(std::string &name);
-	void setRxAntenna(std::string &name);
-	std::string getRxAntenna();
-	std::string getTxAntenna();
 
 	double getTxFreq() { return tx_freq; }
 	double getRxFreq() { return rx_freq; }
@@ -209,7 +202,7 @@ public:
 	};
 
 private:
-	uhd::usrp::multi_usrp::sptr usrp_dev;
+	uhd::usrp::single_usrp::sptr usrp_dev;
 	enum busType bus;
 
 	double desired_smpl_rt, actual_smpl_rt;
@@ -391,26 +384,6 @@ double uhd_device::setRxGain(double db)
 	return rx_gain;
 }
 
-void uhd_device::setTxAntenna(std::string &name)
-{
-	usrp_dev->set_tx_antenna(name);
-}
-
-void uhd_device::setRxAntenna(std::string &name)
-{
-	usrp_dev->set_rx_antenna(name);
-}
-
-std::string uhd_device::getTxAntenna()
-{
-	return usrp_dev->get_tx_antenna();
-}
-
-std::string uhd_device::getRxAntenna()
-{
-	return usrp_dev->get_rx_antenna();
-}
-
 /*
     Parse the UHD device tree and mboard name to find out what device we're
     dealing with. We need the bus type so that the transceiver knows how to
@@ -448,25 +421,25 @@ bool uhd_device::parse_dev_type()
 	return true;
 }
 
-bool uhd_device::open(const std::string &args)
+bool uhd_device::open()
 {
 	// Register msg handler
 	uhd::msg::register_handler(&uhd_msg_handler);
 
 	// Find UHD devices
-	uhd::device_addr_t addr(args);
-	uhd::device_addrs_t dev_addrs = uhd::device::find(addr);
+	uhd::device_addr_t args("");
+	uhd::device_addrs_t dev_addrs = uhd::device::find(args);
 	if (dev_addrs.size() == 0) {
-		LOG(ALERT) << "No UHD devices found with address '" << args << "'";
+		LOG(ALERT) << "No UHD devices found";
 		return false;
 	}
 
 	// Use the first found device
 	LOG(INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
-		usrp_dev = uhd::usrp::multi_usrp::make(dev_addrs[0]);
+		usrp_dev = uhd::usrp::single_usrp::make(dev_addrs[0]);
 	} catch(...) {
-		LOG(ALERT) << "UHD make failed, device " << dev_addrs[0].to_string();
+		LOG(ALERT) << "UHD make failed";
 		return false;
 	}
 
@@ -548,19 +521,6 @@ void uhd_device::restart(uhd::time_spec_t ts)
 	cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
 	cmd.stream_now = true;
 	usrp_dev->issue_stream_cmd(cmd);
-
-	uhd::rx_metadata_t md;
-	uint32_t buff[rx_spp];
-
-	for (int i = 0; i < 50; i++) {
-		usrp_dev->get_device()->recv(buff,
-					     rx_spp,
-					     md,
-					     uhd::io_type_t::COMPLEX_INT16,
-					     uhd::device::RECV_MODE_ONE_PACKET);
-	}
-
-	init_rd_ts = convert_time(md.time_spec, actual_smpl_rt);
 }
 
 bool uhd_device::start()
@@ -614,7 +574,6 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
-			LOG(ALERT) << "UHD: Receive timed out";
 			return ERROR_UNRECOVERABLE;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
@@ -627,7 +586,7 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 
 	// Missing timestamp
 	if (!md.has_time_spec) {
-		LOG(ALERT) << "UHD: Received packet missing timestamp";
+		LOG(ERR) << "UHD: Received packet missing timestamp";
 		return ERROR_UNRECOVERABLE;
 	}
 
@@ -635,9 +594,8 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 
 	// Monotonicity check
 	if (ts < prev_ts) {
-		LOG(ALERT) << "UHD: Loss of monotonic time";
-		LOG(ALERT) << "Current time: " << ts.get_real_secs() << ", " 
-			   << "Previous time: " << prev_ts.get_real_secs();
+		LOG(ERR) << "UHD: Loss of monotonic: " << ts.get_real_secs();
+		LOG(ERR) << "UHD: Previous time: " << prev_ts.get_real_secs();
 		return ERROR_TIMING;
 	} else {
 		prev_ts = ts;
@@ -686,8 +644,7 @@ int uhd_device::readSamples(short *buf, int len, bool *overrun,
 		rc = check_rx_md_err(metadata, num_smpls);
 		switch (rc) {
 		case ERROR_UNRECOVERABLE:
-			LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
-			LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
+			LOG(ALERT) << "Unrecoverable error, exiting...";
 			exit(-1);
 		case ERROR_TIMING:
 			restart(prev_ts);
@@ -744,10 +701,10 @@ int uhd_device::writeSamples(short *buf, int len, bool *underrun,
 
 		if (drop_cnt == 1) {
 			LOG(DEBUG) << "Aligning transmitter: stop burst";
-			*underrun = true;
 			metadata.end_of_burst = true;
 		} else if (drop_cnt < 30) {
 			LOG(DEBUG) << "Aligning transmitter: packet advance";
+			*underrun = true;
 			return len;
 		} else {
 			LOG(DEBUG) << "Aligning transmitter: start burst";
@@ -763,12 +720,8 @@ int uhd_device::writeSamples(short *buf, int len, bool *underrun,
 					uhd::io_type_t::COMPLEX_INT16,
 					uhd::device::SEND_MODE_FULL_BUFF);
 
-	if (num_smpls != (unsigned) len) {
-		LOG(ALERT) << "UHD: Device send timed out";
-		LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
-		LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
-		exit(-1);
-	}
+	if (num_smpls != (unsigned)len)
+		LOG(ERR) << "UHD: Sent fewer samples than requested";
 
 	return num_smpls;
 }
@@ -799,18 +752,14 @@ bool uhd_device::setRxFreq(double wFreq)
 
 bool uhd_device::recv_async_msg()
 {
-	uhd::async_metadata_t md;
-	if (!usrp_dev->get_device()->recv_async_msg(md))
+	uhd::async_metadata_t metadata;
+	if (!usrp_dev->get_device()->recv_async_msg(metadata))
 		return false;
 
 	// Assume that any error requires resynchronization
-	if (md.event_code != uhd::async_metadata_t::EVENT_CODE_BURST_ACK) {
+	if (metadata.event_code != uhd::async_metadata_t::EVENT_CODE_BURST_ACK) {
 		aligned = false;
-
-		if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
-		    (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
-			LOG(ERR) << str_code(md);
-		}
+		LOG(ERR) << str_code(metadata);
 	}
 
 	return true;
@@ -923,11 +872,11 @@ ssize_t smpl_buf::read(void *buf, size_t len, TIMESTAMP timestamp)
 
 	// How many samples should be copied
 	size_t num_smpls = time_end - timestamp;
-	if (num_smpls > len)
+	if (num_smpls > len);
 		num_smpls = len;
 
 	// Starting index
-	size_t read_start = data_start + (timestamp - time_start) % buf_len;
+	size_t read_start = data_start + (timestamp - time_start);
 
 	// Read it
 	if (read_start + num_smpls < buf_len) {
