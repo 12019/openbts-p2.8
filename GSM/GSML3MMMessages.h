@@ -108,8 +108,6 @@ L3MMMessage* L3MMFactory(L3MMMessage::MessageType MTI);
 L3MMMessage* parseL3MM(const L3Frame& source);
 
 
-
-
 /** GSM 04.08 9.2.15 */
 class L3LocationUpdatingRequest : public L3MMMessage
 {
@@ -121,10 +119,8 @@ class L3LocationUpdatingRequest : public L3MMMessage
 public:
 	L3LocationUpdatingRequest():L3MMMessage() {}
 
-	const L3MobileIdentity& mobileID() const
-		{ return mMobileIdentity; }
-	const L3LocationAreaIdentity& LAI() const
-		{ return mLAI; }
+	const L3MobileIdentity& mobileID() const { return mMobileIdentity; }
+	const L3LocationAreaIdentity& LAI() const { return mLAI; }
 	const L3CipheringKeySequenceNumber cksn() const { return mCKSN; }
 
 	int MTI() const { return (int)LocationUpdatingRequest; }

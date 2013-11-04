@@ -41,12 +41,11 @@ class L3MobileIdentity;
 };
 
 namespace Control {
-
-void CMServiceResponder(const GSM::L3CMServiceRequest* cmsrq, GSM::LogicalChannel* DCCH);
-void IMSIDetachController(const GSM::L3IMSIDetachIndication* idi, GSM::LogicalChannel* DCCH);
-void LocationUpdatingController(const GSM::L3LocationUpdatingRequest* lur, GSM::LogicalChannel* DCCH);
-bool auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH); // needed for testauth command in CLI
-bool auth_reg(GSM::L3MobileIdentity mobileID, GSM::LogicalChannel* LCH);
+    void CMServiceResponder(const GSM::L3CMServiceRequest* cmsrq, GSM::LogicalChannel* DCCH);
+    void IMSIDetachController(const GSM::L3IMSIDetachIndication* idi, GSM::LogicalChannel* DCCH);
+    void LocationUpdatingController(const GSM::L3LocationUpdatingRequest* lur, GSM::LogicalChannel* DCCH);
+    bool auth_sip(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH); // needed for testauth command in CLI
+    bool auth_reg(GSM::L3MobileIdentity mobileID, GSM::LogicalChannel* LCH);
 }
 
 

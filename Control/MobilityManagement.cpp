@@ -138,9 +138,9 @@ bool sendWelcomeMessage(const char* messageName, const char* shortCodeName, cons
 }
 
 /**
-	Controller for the Location Updating transaction, GSM 04.08 4.4.4.
-	@param lur The location updating request.
-	@param DCCH The Dm channel to the MS, which will be released by the function.
+   Controller for the Location Updating transaction, GSM 04.08 4.4.4.
+   @param lur The location updating request.
+   @param DCCH The Dm channel to the MS, which will be released by the function.
 */
 void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, LogicalChannel* DCCH)
 {
@@ -148,8 +148,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	assert(lur);
 	LOG(INFO) << *lur;
 
-	// The location updating request gets mapped to a SIP
-	// registration with the Asterisk server.
+	// The location updating request gets mapped to a SIP registration with the Asterisk server.
 
 	// We also allocate a new TMSI for every handset we encounter.
 	// If the handset is allowed to register it may receive a TMSI reassignment.
@@ -167,7 +166,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// We assign generate a TMSI for every new phone we see,
 	// even if we don't actually assign it.
 	unsigned newTMSI = 0;
-	if (!preexistingTMSI) newTMSI = gTMSITable.assign(IMSI,lur);
+	if (!preexistingTMSI) newTMSI = gTMSITable.assign(IMSI, lur);
 
 	string name = "IMSI" + string(IMSI);
 
@@ -180,7 +179,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	bool openRegistration = false;
 	if (gConfig.defines("Control.LUR.OpenRegistration")) {
 		if (!gConfig.defines("Control.LUR.OpenRegistration.Message")) {
-			gConfig.set("Control.LUR.OpenRegistration.Message","Welcome to the test network.  Your IMSI is ");
+			gConfig.set("Control.LUR.OpenRegistration.Message", "Welcome to the test network.  Your IMSI is ");
 		}
 		Regexp rxp(gConfig.getStr("Control.LUR.OpenRegistration").c_str());
 		openRegistration = rxp.match(IMSI);

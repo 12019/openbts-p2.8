@@ -45,32 +45,22 @@ using namespace std;
 using namespace GSM;
 using namespace Control;
 
-
-
-
 /**
 	Dispatch the appropriate controller for a Mobility Management message.
 	@param req A pointer to the initial message.
 	@param DCCH A pointer to the logical channel for the transaction.
 */
-void DCCHDispatchMM(const L3MMMessage* req, LogicalChannel *DCCH)
-{
-	assert(req);
-	L3MMMessage::MessageType MTI = (L3MMMessage::MessageType)req->MTI();
-	switch (MTI) {
-		case L3MMMessage::LocationUpdatingRequest:
-			LocationUpdatingController(dynamic_cast<const L3LocationUpdatingRequest*>(req),DCCH);
-			break;
-		case L3MMMessage::IMSIDetachIndication:
-			IMSIDetachController(dynamic_cast<const L3IMSIDetachIndication*>(req),DCCH);
-			break;
-		case L3MMMessage::CMServiceRequest:
-			CMServiceResponder(dynamic_cast<const L3CMServiceRequest*>(req),DCCH);
-			break;
-		default:
-			LOG(NOTICE) << "unhandled MM message " << MTI << " on " << *DCCH;
-			throw UnsupportedMessage();
-	}
+void DCCHDispatchMM(const L3MMMessage* req, LogicalChannel *DCCH) {
+    assert(req);
+    L3MMMessage::MessageType MTI = (L3MMMessage::MessageType)req->MTI();
+    switch (MTI) {
+    case L3MMMessage::LocationUpdatingRequest: LocationUpdatingController(dynamic_cast<const L3LocationUpdatingRequest*>(req), DCCH); break;
+    case L3MMMessage::IMSIDetachIndication: IMSIDetachController(dynamic_cast<const L3IMSIDetachIndication*>(req), DCCH); break;
+    case L3MMMessage::CMServiceRequest: CMServiceResponder(dynamic_cast<const L3CMServiceRequest*>(req), DCCH); break;
+    default:
+	LOG(NOTICE) << "unhandled MM message " << MTI << " on " << *DCCH;
+	throw UnsupportedMessage();
+    }
 }
 
 

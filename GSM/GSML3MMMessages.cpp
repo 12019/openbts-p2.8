@@ -42,66 +42,45 @@ using namespace GSM;
 
 
 
-ostream& GSM::operator<<(ostream& os, L3MMMessage::MessageType val)
-{
-	switch (val) {
-		case L3MMMessage::IMSIDetachIndication: 
-			os << "IMSI Detach Indication"; break;
-		case L3MMMessage::CMServiceRequest: 
-			os << "CM Service Request"; break;
-		case L3MMMessage::CMServiceAccept: 
-			os << "CM Service Accept"; break;
-		case L3MMMessage::CMServiceReject: 
-			os << "CM Service Reject"; break;
-		case L3MMMessage::CMServiceAbort: 
-			os << "CM Service Abort"; break;
-		case L3MMMessage::CMReestablishmentRequest:
-			os << "CM Re-establishment Request"; break;
-		case L3MMMessage::IdentityResponse: 
-			os << "Identity Response"; break;
-		case L3MMMessage::IdentityRequest: 
-			os << "Identity Request"; break;
-		case L3MMMessage::MMInformation: 
-			os << "MM Information"; break;
-		case L3MMMessage::LocationUpdatingAccept: 
-			os << "Location Updating Accept"; break;
-		case L3MMMessage::LocationUpdatingReject: 
-			os << "Location Updating Reject"; break;
-		case L3MMMessage::LocationUpdatingRequest: 
-			os << "Location Updating Request"; break;
-		case L3MMMessage::MMStatus: 
-			os << "MM Status"; break;
-		case L3MMMessage::AuthenticationRequest:
-			os << "Authentication Request"; break;
-		case L3MMMessage::AuthenticationResponse:
-			os << "Authentication Response"; break;
-        case L3MMMessage::AuthenticationReject:
-        os << "AuthenticationReject"; break;
-		default: os << hex << "0x" << (int)val << dec;
-	}
-	return os;
+ostream& GSM::operator<<(ostream& os, L3MMMessage::MessageType val) {
+    switch (val) {
+    case L3MMMessage::IMSIDetachIndication: os << "IMSI Detach Indication"; break;
+    case L3MMMessage::CMServiceRequest: os << "CM Service Request"; break;
+    case L3MMMessage::CMServiceAccept: os << "CM Service Accept"; break;
+    case L3MMMessage::CMServiceReject: os << "CM Service Reject"; break;
+    case L3MMMessage::CMServiceAbort: os << "CM Service Abort"; break;
+    case L3MMMessage::CMReestablishmentRequest: os << "CM Re-establishment Request"; break;
+    case L3MMMessage::IdentityResponse: os << "Identity Response"; break;
+    case L3MMMessage::IdentityRequest: os << "Identity Request"; break;
+    case L3MMMessage::MMInformation: os << "MM Information"; break;
+    case L3MMMessage::LocationUpdatingAccept: os << "Location Updating Accept"; break;
+    case L3MMMessage::LocationUpdatingReject: os << "Location Updating Reject"; break;
+    case L3MMMessage::LocationUpdatingRequest: os << "Location Updating Request"; break;
+    case L3MMMessage::MMStatus: os << "MM Status"; break;
+    case L3MMMessage::AuthenticationRequest: os << "Authentication Request"; break;
+    case L3MMMessage::AuthenticationResponse: os << "Authentication Response"; break;
+    case L3MMMessage::AuthenticationReject: os << "AuthenticationReject"; break;
+    default: os << hex << "0x" << (int)val << dec;
+    }
+    return os;
 }
 
 
-
-
-L3MMMessage* GSM::L3MMFactory(L3MMMessage::MessageType MTI)
-{
-	switch (MTI) {
-	  case L3MMMessage::LocationUpdatingRequest: return new L3LocationUpdatingRequest;
-	  case L3MMMessage::IMSIDetachIndication: return new L3IMSIDetachIndication;
-	  case L3MMMessage::CMServiceAbort: return new L3CMServiceAbort;
-	  case L3MMMessage::CMServiceRequest: return new L3CMServiceRequest;
-	  // Since we don't support re-establishment, don't bother parsing this.
-	  //case L3MMMessage::CMReestablishmentRequest: return new L3CMReestablishmentRequest;
-	  case L3MMMessage::MMStatus: return new L3MMStatus;
-	  case L3MMMessage::IdentityResponse: return new L3IdentityResponse;
-	  case L3MMMessage::AuthenticationResponse: return new L3AuthenticationResponse;
-	case L3MMMessage::AuthenticationFailure: return new L3AuthenticationFailure;
-	  default:
-	    LOG(WARNING) << "no L3 MM factory support for message " << MTI;
-		return NULL;
-	}
+L3MMMessage* GSM::L3MMFactory(L3MMMessage::MessageType MTI) {
+    switch (MTI) {
+    case L3MMMessage::LocationUpdatingRequest: return new L3LocationUpdatingRequest;
+    case L3MMMessage::IMSIDetachIndication: return new L3IMSIDetachIndication;
+    case L3MMMessage::CMServiceAbort: return new L3CMServiceAbort;
+    case L3MMMessage::CMServiceRequest: return new L3CMServiceRequest;
+	//case L3MMMessage::CMReestablishmentRequest: return new L3CMReestablishmentRequest; // Since we don't support re-establishment, don't bother parsing this.
+    case L3MMMessage::MMStatus: return new L3MMStatus;
+    case L3MMMessage::IdentityResponse: return new L3IdentityResponse;
+    case L3MMMessage::AuthenticationResponse: return new L3AuthenticationResponse;
+    case L3MMMessage::AuthenticationFailure: return new L3AuthenticationFailure;
+    default:
+	LOG(WARNING) << "no L3 MM factory support for message " << MTI;
+	return NULL;
+    }
 }
 
 L3MMMessage * GSM::parseL3MM(const L3Frame& source)
@@ -118,26 +97,21 @@ L3MMMessage * GSM::parseL3MM(const L3Frame& source)
 
 
 
-void L3MMMessage::text(ostream& os) const
-{
+void L3MMMessage::text(ostream& os) const {
 	os << "MM " << (MessageType) MTI() << " ";
 }
 
 
-void L3LocationUpdatingRequest::parseBody( const  L3Frame &src, size_t &rp )
-{
-		// ciphering key sequence number
-		mCKSN.parseV(src, rp);
-		// skip updating type
-		rp += 4;
-		mLAI.parseV(src,rp);
-		mClassmark.parseV(src,rp);
-		mMobileIdentity.parseLV(src, rp);
+void L3LocationUpdatingRequest::parseBody( const  L3Frame &src, size_t &rp ) {	       
+    mCKSN.parseV(src, rp); // ciphering key sequence number
+    rp += 4; // skip updating type
+    mLAI.parseV(src,rp);
+    mClassmark.parseV(src,rp);
+    mMobileIdentity.parseLV(src, rp);
 }
 
 
-void L3LocationUpdatingRequest::text(ostream& os) const
-{
+void L3LocationUpdatingRequest::text(ostream& os) const {
 	L3MMMessage::text(os);
 	os << "LAI=("<<mLAI<<")";
 	os << " MobileIdentity=("<<mMobileIdentity<<")";
@@ -146,10 +120,8 @@ void L3LocationUpdatingRequest::text(ostream& os) const
 }
 
 
-size_t L3LocationUpdatingRequest::l2BodyLength() const
-{
-	size_t len = 0;
-	len += 1;	// updating type and ciphering key seq num
+size_t L3LocationUpdatingRequest::l2BodyLength() const {
+	size_t len = 1;	// updating type and ciphering key seq num
 	len += mLAI.lengthV();
 	len += mClassmark.lengthV();
 	len += mMobileIdentity.lengthLV(); 

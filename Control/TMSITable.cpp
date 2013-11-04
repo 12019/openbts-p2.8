@@ -100,7 +100,7 @@ unsigned TMSITable::assign(const char* IMSI, const GSM::L3LocationUpdatingReques
 	LOG(DEBUG) << "IMSI=" << IMSI;
 	// Is there already a record?
 	unsigned TMSI;
-	if (sqlite3_single_lookup(mDB,"TMSI_TABLE","IMSI",IMSI,"TMSI",TMSI)) {
+	if (sqlite3_single_lookup(mDB, "TMSI_TABLE", "IMSI", IMSI, "TMSI", TMSI)) {
 		LOG(DEBUG) << "found TMSI " << TMSI;
 		touch(TMSI);
 		return TMSI;
@@ -114,20 +114,20 @@ unsigned TMSITable::assign(const char* IMSI, const GSM::L3LocationUpdatingReques
 		snprintf(query, 1000,
 				"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED) "
 				"VALUES ('%s',%u,%u)",
-				IMSI,now,now);
+				IMSI, now, now);
 	} else {
 		const GSM::L3LocationAreaIdentity &lai = lur->LAI();
 		const GSM::L3MobileIdentity &mid = lur->mobileID();
-		if (mid.type()==GSM::TMSIType) {
+		if (mid.type() == GSM::TMSIType) {
 			snprintf(query, 1000,
 					"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED,PREV_MCC,PREV_MNC,PREV_LAC,OLD_TMSI) "
 					"VALUES ('%s',%u,%u,%u,%u,%u,%u)",
-					IMSI,now,now,lai.MCC(),lai.MNC(),lai.LAC(),mid.TMSI());
+					IMSI, now, now, lai.MCC(), lai.MNC(), lai.LAC(), mid.TMSI());
 		} else {
 			snprintf(query, 1000,
 					"INSERT INTO TMSI_TABLE (IMSI,CREATED,ACCESSED,PREV_MCC,PREV_MNC,PREV_LAC) "
 					"VALUES ('%s',%u,%u,%u,%u,%u)",
-					IMSI,now,now,lai.MCC(),lai.MNC(),lai.LAC());
+					IMSI, now, now, lai.MCC(), lai.MNC(), lai.LAC());
 		}
 	}
 	if (!sqlite3_command(mDB,query)) {

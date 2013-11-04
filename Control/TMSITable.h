@@ -36,9 +36,9 @@
 struct sqlite3;
 
 namespace GSM {
-class L3LocationUpdatingRequest;
-class L3MobileStationClassmark2;
-class L3MobileIdentity;
+    class L3LocationUpdatingRequest;
+    class L3MobileStationClassmark2;
+    class L3MobileIdentity;
 }
 
 
