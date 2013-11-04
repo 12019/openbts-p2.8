@@ -67,6 +67,5 @@ noinst_HEADERS = \
 	GSMTransfer.h \
 	PowerManager.h \
 	GSMTAPDump.h \
-	gsmtap.h \
 	PhysicalStatus.h
 

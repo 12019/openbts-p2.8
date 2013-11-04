@@ -75,8 +75,7 @@ void Control::CMServiceResponder(const L3CMServiceRequest* cmsrq, LogicalChannel
 			break;
 		default:
 			LOG(NOTICE) << "service not supported for " << *cmsrq;
-			// Cause 0x20 means "serivce not supported".
-			DCCH->send(L3CMServiceReject(0x20));
+			DCCH->send(L3CMServiceReject(0x20)); // Cause 0x20 means "serivce not supported"
 			DCCH->send(L3ChannelRelease());
 	}
 	// The transaction may or may not be cleared,
@@ -158,7 +157,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 	// if it fails in the GSM domain.
 	L3MobileIdentity mobileID = lur->mobileID();
 	bool sameLAI = (lur->LAI() == gBTS.LAI());
-	unsigned preexistingTMSI = resolveIMSI(sameLAI,mobileID,DCCH);
+	unsigned preexistingTMSI = resolveIMSI(sameLAI, mobileID, DCCH);
 	const char *IMSI = mobileID.digits();
 	// IMSIAttach set to true if this is a new registration.
 	bool IMSIAttach = (preexistingTMSI==0);
@@ -273,7 +272,7 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 		DCCH->send(L3LocationUpdatingAccept(gBTS.LAI()));
 	} else {
 		assert(newTMSI);
-		DCCH->send(L3LocationUpdatingAccept(gBTS.LAI(),newTMSI));
+		DCCH->send(L3LocationUpdatingAccept(gBTS.LAI(), newTMSI));
 		// Wait for MM TMSI REALLOCATION COMPLETE (0x055b).
 		L3Frame* resp = DCCH->recv(1000);
 		// FIXME -- Actually check the response type.
@@ -294,13 +293,11 @@ void Control::LocationUpdatingController(const L3LocationUpdatingRequest* lur, L
 
 	// If this is an IMSI attach, send a welcome message.
 	if (IMSIAttach) {
-		if (success) {
-			sendWelcomeMessage( "Control.LUR.NormalRegistration.Message",
-				"Control.LUR.NormalRegistration.ShortCode", IMSI, DCCH);
-		} else {
-			sendWelcomeMessage( "Control.LUR.OpenRegistration.Message",
-				"Control.LUR.OpenRegistration.ShortCode", IMSI, DCCH);
-		}
+	    if (success) {
+		sendWelcomeMessage( "Control.LUR.NormalRegistration.Message", "Control.LUR.NormalRegistration.ShortCode", IMSI, DCCH);
+	    } else {
+		sendWelcomeMessage( "Control.LUR.OpenRegistration.Message", "Control.LUR.OpenRegistration.ShortCode", IMSI, DCCH);
+	    }
 	}
 
 	// Release the channel and return.

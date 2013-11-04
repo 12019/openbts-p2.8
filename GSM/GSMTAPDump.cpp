@@ -30,15 +30,13 @@
 
 UDPSocket GSMTAPSocket;
 
-void gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN,
-                  GSM::TypeAndOffset to, bool is_saach, bool ul_dln,
-                  const BitVector& frame)
+int gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN, GSM::TypeAndOffset to, bool is_saach, bool ul_dln, const BitVector& frame)
 {
 	char buffer[MAX_UDP_LENGTH];
 	int ofs = 0;
 
 	// Check if GSMTap is enabled
-	if (!gConfig.defines("Control.GSMTAP.TargetIP")) return;
+	if (!gConfig.defines("Control.GSMTAP.TargetIP")) return 0;
 
 	// Port configuration
 	unsigned port = GSMTAP_UDP_PORT;	// default port for GSM-TAP
@@ -110,18 +108,18 @@ void gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN,
 
 	// Build header
 	struct gsmtap_hdr *header = (struct gsmtap_hdr *)buffer;
-	header->version			= GSMTAP_VERSION;
-	header->hdr_len			= sizeof(struct gsmtap_hdr) >> 2;
-	header->type			= GSMTAP_TYPE_UM;
-	header->timeslot		= TS;
-	header->arfcn			= htons(ARFCN);
-	header->signal_dbm		= 0; /* FIXME */
-	header->snr_db			= 0; /* FIXME */
+	header->version		= GSMTAP_VERSION;
+	header->hdr_len		= sizeof(struct gsmtap_hdr) >> 2;
+	header->type		= GSMTAP_TYPE_UM;
+	header->timeslot	= TS;
+	header->arfcn		= htons(ARFCN);
+	header->signal_dbm	= 0; /* FIXME */
+	header->snr_db		= 0; /* FIXME */
 	header->frame_number	= htonl(FN);
-	header->sub_type		= stype;
-	header->antenna_nr		= 0;
-	header->sub_slot		= scn;
-	header->res				= 0;
+	header->sub_type	= stype;
+	header->antenna_nr	= 0;
+	header->sub_slot	= scn;
+	header->res		= 0;
 
 	ofs += sizeof(*header);
 
@@ -134,8 +132,6 @@ void gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN,
 	if (r < 0) {
 	    LOG(ERR) << "GSMTAP failed to send to " << gConfig.getStr("Control.GSMTAP.TargetIP");
 	}
+	return r;
 }
 
-
-
-// vim: ts=4 sw=4

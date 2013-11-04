@@ -729,9 +729,7 @@ void XCCHL1Decoder::handleGoodFrame()
 	OBJLOG(DEBUG) <<"XCCHL1Decoder d[]=" << mD;
 
 	if (mUpstream) {
-		// Send all bits to GSMTAP
-		gWriteGSMTAP(ARFCN(),TN(),mReadTime.FN(),
-		             typeAndOffset(),mMapping.repeatLength()>51,true,mD);
+		gWriteGSMTAP(ARFCN(), TN(), mReadTime.FN(), typeAndOffset(), mMapping.repeatLength() > 51, true, mD); // Send all bits to GSMTAP
 		// Build an L2 frame and pass it up.
 		const BitVector L2Part(mD.tail(headerOffset()));
 		OBJLOG(DEBUG) <<"XCCHL1Decoder L2=" << L2Part;
@@ -885,9 +883,7 @@ void XCCHL1Encoder::sendFrame(const L2Frame& frame)
 	//assert(mD.size()==headerOffset()+frame.size());
 	frame.copyToSegment(mU,headerOffset());
 
-	// Send to GSMTAP (must send mU = real bits !)
-	gWriteGSMTAP(ARFCN(),TN(),mNextWriteTime.FN(),
-	             typeAndOffset(),mMapping.repeatLength()>51,false,mU);
+	gWriteGSMTAP(ARFCN(), TN(), mNextWriteTime.FN(), typeAndOffset(), mMapping.repeatLength() > 51, false, mU); // Send to GSMTAP (must send mU = real bits !)
 
 	// Encode data into bursts
 	OBJLOG(DEBUG) << "XCCHL1Encoder d[]=" << mD;

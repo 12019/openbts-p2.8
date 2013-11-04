@@ -24,16 +24,11 @@
 #ifndef GSMTAPDUMP_H
 #define GSMTAPDUMP_H
 
-#include "gsmtap.h"
+#include <osmocom/core/gsmtap.h>
 #include "GSMCommon.h"
 #include "GSMTransfer.h"
 
-
-void gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN,
-                  GSM::TypeAndOffset to, bool is_sacch, bool ul_dln,
-                  const BitVector& frame);
-
+int gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN, GSM::TypeAndOffset to, bool is_sacch, bool ul_dln, const BitVector& frame);
 
 #endif
 
-// vim: ts=4 sw=4
