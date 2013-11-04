@@ -39,12 +39,12 @@ int gWriteGSMTAP(unsigned ARFCN, unsigned TS, unsigned FN, GSM::TypeAndOffset to
 	if (!gConfig.defines("Control.GSMTAP.TargetIP")) return 0;
 
 	// Port configuration
-	unsigned port = GSMTAP_UDP_PORT;	// default port for GSM-TAP
+	unsigned port = GSMTAP_UDP_PORT; // default port for GSM-TAP
 	if (gConfig.defines("Control.GSMTAP.TargetPort"))
 		port = gConfig.getNum("Control.GSMTAP.TargetPort");
 
 	// Set socket destination
-	GSMTAPSocket.destination(port,gConfig.getStr("Control.GSMTAP.TargetIP").c_str());
+	GSMTAPSocket.destination(port, gConfig.getStr("Control.GSMTAP.TargetIP").c_str());
 
 	// Decode TypeAndOffset
 	uint8_t stype, scn;
